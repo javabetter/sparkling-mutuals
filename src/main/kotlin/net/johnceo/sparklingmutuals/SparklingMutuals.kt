@@ -43,6 +43,7 @@ object SparklingMutuals : ModInitializer {
         SafariTracking.register()
         BeeNests.register()
         SafariEsp.register()
+        TeammateEsp.register()
         ClientTickEvents.START_CLIENT_TICK.register(AutoClicker::tick)
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
