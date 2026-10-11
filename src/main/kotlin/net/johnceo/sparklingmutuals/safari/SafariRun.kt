@@ -108,6 +108,8 @@ class SafariRun(val startedAt: Long) {
     val completion = SafariCompletionEvents()
     /** Unique progress retains sparkle checks; missing rows and PBs use their own capture evidence. */
     fun uniqueComplete(name: String, party: PartySparklingState, localOnly: Boolean = false): Boolean {
+        if (!localOnly && name == "Macaw" && SafariBiome.FOREST in communalClears) return true
+        if (uniqueUnavailable(name)) return true
         if (count(name) == 0) return false
         val critter = SafariRoster.named(name) ?: return false
         if (name !in uniqueChecks) return true
@@ -127,6 +129,16 @@ class SafariRun(val startedAt: Long) {
         }
     }
     private val uniqueChecks = setOf("Honeybug", "Rockmite", "Snoozle", "Bluebird", "Parakeet", "Macaw")
+    /** A completed local survey can prove a variable critter never spawned; a sighting revokes it. */
+    fun uniqueUnavailable(name: String): Boolean {
+        val remaining = nearby[SafariBiome.CAVERN] ?: return false
+        if (encountered(name) || name in remaining) return false
+        return when (name) {
+            "Rockmite" -> allMoundsBroken && !remainingMounds && "Rockmite Mound" !in remaining
+            "Snoozle" -> wallsChecked && !remainingWalls
+            else -> false
+        }
+    }
     private val sightings = mutableSetOf<String>()
     private val observedCritters = mutableMapOf<String, MutableSet<Int>>()
     private val observedUuids = mutableMapOf<String, MutableSet<java.util.UUID>>()
@@ -147,7 +159,7 @@ class SafariRun(val startedAt: Long) {
         playerX: Double? = null, playerZ: Double? = null, nestsPunched: Int = 0) {
         nearby[biome] = speciesInRange
         if (speciesInRange.isNotEmpty()) partyFullClears.remove(biome)
-        wallsChecked = allWallsChecked
+        if (biome == SafariBiome.CAVERN) wallsChecked = allWallsChecked
         if (biome == SafariBiome.FOREST) { nestsChecked = allNestsChecked; punchedNests = nestsPunched }
         if (biome == SafariBiome.FOREST) nearbyMacaws = macawsInRange
         if (SafariCompletionZones.forBiome(biome).isNotEmpty() && playerX != null && playerZ != null) {

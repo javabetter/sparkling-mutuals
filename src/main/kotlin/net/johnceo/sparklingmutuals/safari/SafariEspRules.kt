@@ -87,9 +87,10 @@ object SafariEspRules {
     fun profitableEsp(species: String, enabled: Boolean) = enabled && species in profitableSpecies
     fun neededForRun(species: String, mound: Boolean, run: SafariRun?, fullClear: Boolean, profitable: Boolean = true,
         party: PartySparklingState? = null) =
-        if (party != null && species in SafariHelperRules.species)
+        if (fullClear) true
+        else if (species == "Rockmite" && mound && party != null)
             SafariHelperRules.needed(species, if (fullClear) SafariMode.FULL_CLEAR else SafariMode.UNIQUE, run, party)
-        else fullClear || species == "Rockmite" && mound || profitable && species in profitableSpecies || (run?.count(species) ?: 0) == 0
+        else species == "Rockmite" && mound || (run?.count(species) ?: 0) == 0 && run?.uniqueUnavailable(species) != true
     fun neededForSparkling(species: String, mound: Boolean, party: PartySparklingState, profitable: Boolean,
         run: SafariRun? = null, uuid: java.util.UUID? = null, now: Long = System.currentTimeMillis()): Boolean {
         if (profitableEsp(species, profitable)) return true
