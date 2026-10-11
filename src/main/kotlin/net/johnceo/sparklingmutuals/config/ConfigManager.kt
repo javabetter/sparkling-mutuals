@@ -53,6 +53,7 @@ object ConfigManager {
     var achievementSound = true
     var achievementsToParty = false
     var autoImportLogs = true
+    var runCoinsInstaSell = false
     /** Modification time of the newest archived log already imported. */
     var logsImportedUpTo = 0L
     var hideCaptureChat = false
@@ -65,7 +66,7 @@ object ConfigManager {
         ::hideyhoQuestClicks to true, ::hideHauntedPaintings to true, ::shinyDetection to true,
         ::progressHud to true, ::countUniqueOnly to false, ::missingPanel to true,
         ::highlightBeeNests to true, ::removeDarkness to true, ::sparklingAlert to true,
-        ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::runHistory to true, ::achievements to true, ::achievementSound to true, ::achievementsToParty to false, ::autoImportLogs to true,
+        ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::runHistory to true, ::achievements to true, ::achievementSound to true, ::achievementsToParty to false, ::autoImportLogs to true, ::runCoinsInstaSell to false,
         ::hideCaptureChat to false, ::hideGroundCapsules to true, ::hideFlyingCapsules to true,
         ::highlightSnooperWalls to true, ::showBeeNests to true, ::showMoundCount to true,
         ::showSnooperWalls to true, ::showMoundStats to false,
