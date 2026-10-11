@@ -1,5 +1,7 @@
 # Sparkling Mutuals
 
+Unique progress and missing rows require one catch per species. When the party needs sparklings, Honeybug also needs three distinct UUIDs, three punched nests and no remaining nests; Rockmite and Snoozle need cleared mounds/walls; all birds wait for all required food feedings. Unvisited Forest/Cavern special species wait for party fd/cd confirmation. Local Unique clears announce done once; Icy/Haunted stay capture-based. Personal PBs still use personal catches.
+
 - **Teammate ESP:** independent Safari-helper toggles outline loaded party members and show distance-scaled names through walls anywhere in SkyBlock. Both default on; party matching uses UUIDs.
 
 Failed API party commands and discovery refreshes retry after three minutes. Updating the API key through `/apikey` or the settings GUI retries failed work on the next client tick. Party retries are canceled when the connection, roster or Safari mode changes, commands are disabled, or another party client has already answered.

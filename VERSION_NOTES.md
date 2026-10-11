@@ -1,3 +1,9 @@
+## v3 development — Unique completion
+
+- Shared progress/missing rules retain Forest and Cavern sparkle checks after a first catch when party discoveries require them.
+- Unique clears announce fd/cd/id/hd once; unvisited Forest/Cavern special catches wait for party done confirmation. Icy and Haunted remain capture-based; PB requirements are unchanged.
+- Regression coverage includes nests, walls/mounds, extra bird food, remote confirmations and local announcements. Live in-game validation remains needed.
+
 ## v3 development — teammate ESP
 
 - Add independent Highlight teammates and Show teammate names toggles under Safari helpers, both enabled by default. Noamm-style outlines and distance-scaled through-wall names work for loaded party players throughout SkyBlock.
