@@ -68,8 +68,8 @@ class SafariSettings : Config() {
     class Unique {
         @JvmField @ConfigOption(name = "Unique mode", desc = "Highlight missing uniques and track unique-run PBs.")
         @ConfigEditorBoolean var enabled = SafariFullClear.mode == SafariMode.UNIQUE
-        @JvmField @ConfigOption(name = "Critter ESP for profitable shards", desc = "Keep profitable critters highlighted after their first catch.")
-        @ConfigEditorBoolean var profitable = ConfigManager.profitableShardEsp
+        // Retain the saved preference for compatibility; Unique entities now always hide after a catch.
+        var profitable = ConfigManager.profitableShardEsp
     }
     class Party {
         @JvmField @ConfigOption(name = "Respond to party commands", desc = "Reply to party commands; each mod user shares their PB.")
