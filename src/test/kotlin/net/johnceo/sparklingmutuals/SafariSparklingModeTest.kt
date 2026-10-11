@@ -103,14 +103,14 @@ class SafariSparklingModeTest {
         ConfigManager.init(dir)
         assertEquals(SafariMode.FULL_CLEAR, SafariFullClear.mode)
     }
-    @Test fun `floor discovery gates apply to both modes with manual visit overrides`() {
+    @Test fun `full clear keeps spawning supplies while discovery gates apply to other modes`() {
         val floor = FloorDropState()
         for (full in listOf(false, true)) {
-            assertFalse(floor.enabled(SafariBiome.FOREST, full, true, partyBirdsComplete = true))
+            assertEquals(full, floor.enabled(SafariBiome.FOREST, full, true, partyBirdsComplete = true))
             assertEquals(full, floor.enabled(SafariBiome.CAVERN, full, true, partyGemzieComplete = true))
             assertEquals(full, floor.enabled(SafariBiome.CAVERN, full, true, gemzieCaught = true))
             assertTrue(floor.enabled(SafariBiome.HAUNTED, full, true, doomCaught = true))
-            assertFalse(floor.enabled(SafariBiome.HAUNTED, full, true, partyGimmiegoldComplete = true, doomCaught = true))
+            assertEquals(full, floor.enabled(SafariBiome.HAUNTED, full, true, partyGimmiegoldComplete = true, doomCaught = true))
         }
         floor.visit(SafariBiome.CAVERN); floor.force(true)
         assertTrue(floor.enabled(SafariBiome.CAVERN, false, true, gemzieCaught = true))
@@ -123,7 +123,8 @@ class SafariSparklingModeTest {
         floor.record("FLOOR DROP! Soothing Incense", SafariBiome.HAUNTED)
         assertTrue(floor.enabled(SafariBiome.HAUNTED, false, true, partyGimmiegoldComplete = true))
         floor.record("FLOOR DROP! Soothing Incense", SafariBiome.HAUNTED)
-        assertFalse(floor.enabled(SafariBiome.HAUNTED, true, true, partyGimmiegoldComplete = true))
+        assertFalse(floor.enabled(SafariBiome.HAUNTED, false, true, partyGimmiegoldComplete = true))
+        assertTrue(floor.enabled(SafariBiome.HAUNTED, true, true, partyGimmiegoldComplete = true))
         assertTrue(floor.enabled(SafariBiome.HAUNTED, true, true)) // party still needs coins
         floor.reset()
         floor.inventory(listOf("Soothing Incense" to 2, "Soothing Incense" to 2))
