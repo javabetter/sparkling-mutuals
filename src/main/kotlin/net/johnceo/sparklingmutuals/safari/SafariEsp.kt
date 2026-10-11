@@ -264,16 +264,13 @@ object SafariEsp {
         val pose = poses.last()
         fun frame(box: AABB, color: Int) {
             val b = box.move(-camera.x, -camera.y, -camera.z)
-            val corners = List(8) { i -> floatArrayOf((if (i and 1 == 0) b.minX else b.maxX).toFloat(),
-                (if (i and 2 == 0) b.minY else b.maxY).toFloat(), (if (i and 4 == 0) b.minZ else b.maxZ).toFloat()) }
-            for (i in 0..7) for (bit in listOf(1, 2, 4)) if (i and bit == 0) {
-                val axis = if (bit == 1) 0 else if (bit == 2) 1 else 2
-                if (corners[i].contentEquals(corners[i or bit])) continue
-                for (endpoint in listOf(i, i or bit)) {
-                    val p = corners[endpoint]
-                    vertices.addVertex(pose, p[0], p[1], p[2]).setColor(color)
-                        .setNormal(pose, if (axis == 0) 1f else 0f, if (axis == 1) 1f else 0f, if (axis == 2) 1f else 0f).setLineWidth(2f)
-                }
+            EspBoxLines.edges(b.minX.toFloat(), b.minY.toFloat(), b.minZ.toFloat(),
+                b.maxX.toFloat(), b.maxY.toFloat(), b.maxZ.toFloat()) { x, y, z, ex, ey, ez, axis ->
+                val nx = if (axis == 0) 1f else 0f
+                val ny = if (axis == 1) 1f else 0f
+                val nz = if (axis == 2) 1f else 0f
+                vertices.addVertex(pose, x, y, z).setColor(color).setNormal(pose, nx, ny, nz).setLineWidth(2f)
+                vertices.addVertex(pose, ex, ey, ez).setColor(color).setNormal(pose, nx, ny, nz).setLineWidth(2f)
             }
         }
         val delta = client.deltaTracker.getGameTimeDeltaPartialTick(false)

@@ -1,7 +1,5 @@
 package net.johnceo.sparklingmutuals.safari
 
-import java.util.Base64
-
 /** Identification, palette and quadrant limits adapted from Nebulune a573283 (BSD-3-Clause). */
 data class EspEntity(val type: String, val texture: String? = null, val shulker: String? = null,
     val fish: String? = null, val variant: String? = null, val invisible: Boolean = false, val passengers: Boolean = false)
@@ -165,10 +163,8 @@ object SafariEspRules {
     /** Name-tag distance and idle movement are not reliable reasons to hide legacy moving-critter ESP. */
     fun renderCurrent(species: String, sparkling: Boolean, entityCurrent: Boolean, motionCurrent: Boolean, labelCurrent: Boolean, profitable: Boolean = false) =
         entityCurrent && (profitableEsp(species, profitable) || species == "Shyworm" || !sparkling && species in EspMotion.movingSpecies || motionCurrent && labelCurrent)
-    fun textureHash(encoded: String?): String? = try {
-        val json = String(Base64.getDecoder().decode(encoded ?: return null), Charsets.UTF_8)
-        Regex("textures\\.minecraft\\.net/texture/([a-fA-F0-9]{64})(?![a-fA-F0-9])").find(json)?.groupValues?.get(1)?.lowercase()
-    } catch (_: IllegalArgumentException) { null }
+    private val textures = EspTextureCache()
+    fun textureHash(encoded: String?) = textures.hash(encoded)
     fun biomeAt(x: Double, z: Double): SafariBiome? = when {
         x !in -200.0..100.0 || z !in -150.0..150.0 -> null
         x >= -50 && z >= 0 -> SafariBiome.FOREST
@@ -178,6 +174,19 @@ object SafariEspRules {
     }
     fun visible(inSafari: Boolean, enabled: Boolean, onlyInBiome: Boolean, player: SafariBiome?, mob: SafariBiome?) =
         inSafari && enabled && mob != null && (!onlyInBiome || player != null && player == mob)
-    fun floorDrops(displays: List<EspDrop>) = displays.groupBy { Triple(it.x, it.y, it.z) }.values
-        .filter { it.size >= 3 }.map { group -> group.minBy { it.id } }
+    private class DropGroup(var minimum: EspDrop, var count: Int = 1)
+    fun floorDrops(displays: List<EspDrop>): List<EspDrop> {
+        if (displays.size < 3) return emptyList()
+        val groups = LinkedHashMap<Triple<Int, Int, Int>, DropGroup>()
+        for (drop in displays) {
+            val key = Triple(drop.x, drop.y, drop.z)
+            val group = groups[key]
+            if (group == null) groups[key] = DropGroup(drop)
+            else {
+                group.count++
+                if (drop.id < group.minimum.id) group.minimum = drop
+            }
+        }
+        return groups.values.mapNotNull { if (it.count >= 3) it.minimum else null }
+    }
 }
