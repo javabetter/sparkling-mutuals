@@ -34,6 +34,17 @@ object SparklingCommand {
                     .executes { open(::SafariConfigScreen) }
                     .then(ClientCommands.literal("config").executes { open(::SafariConfigScreen) })
                     .then(ClientCommands.literal("gui").executes { open { ContestGui() } })
+                    .then(ClientCommands.literal("history")
+                        .then(ClientCommands.literal("import")
+                            .then(ClientCommands.argument("folder", com.mojang.brigadier.arguments.StringArgumentType.greedyString()).executes {
+                                net.johnceo.sparklingmutuals.history.LogImporter.runImport(java.nio.file.Path.of(
+                                    com.mojang.brigadier.arguments.StringArgumentType.getString(it, "folder").replace("\"", ""))); 1 })
+                            .executes { net.johnceo.sparklingmutuals.history.LogImporter.runImport(net.johnceo.sparklingmutuals.history.LogImporter.defaultLogs()); 1 })
+                        .executes { open { net.johnceo.sparklingmutuals.history.HistoryScreen(null) } })
+                    .then(ClientCommands.literal("achievements").executes {
+                        open { net.johnceo.sparklingmutuals.history.HistoryScreen(null, net.johnceo.sparklingmutuals.history.HistoryScreen.Tab.ACHIEVEMENTS) } })
+                    .then(ClientCommands.literal("stats").executes {
+                        open { net.johnceo.sparklingmutuals.history.HistoryScreen(null, net.johnceo.sparklingmutuals.history.HistoryScreen.Tab.STATS) } })
                     .then(ClientCommands.literal("debug").executes { context ->
                         SafariEsp.debug(Minecraft.getInstance())
                         context.source.sendFeedback(LocalChat.component("[SM] Entity diagnostics saved to latest.log."))
