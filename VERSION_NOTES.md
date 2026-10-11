@@ -1,3 +1,9 @@
+## v3 development — bird targets and Full Clear spawning supplies
+
+- Sparkling Forest birds require nine feeder announcements plus starting bird food observed during the first three seconds. Repeated scans and already recorded floor pickups do not inflate the extra food; a Macaw pair uses one feeding.
+- Full Clear retains Forest/Haunted floor supplies and unpunched nests regardless of party discoveries or clear claims. Cavern requires all three gems held together; existing intact wall/mound helpers remain active.
+- Regression coverage verifies starting-food timing, announcement counts and Full Clear helper visibility. Live perk timing and in-game rendering still need testing.
+
 ## v3 development — party boss records and capture feedback
 
 - Save party-player history and observed Doomspiral/Wumpa PBs from the mod user’s run start. Query with `!pb doom <IGN>` / `!pb wumpa <IGN>`; name lookups ignore case and persist across restarts.
