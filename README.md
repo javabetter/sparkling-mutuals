@@ -1,5 +1,7 @@
 # Sparkling Mutuals
 
+ESP rendering reuses decoded texture profiles, emits box outlines without temporary corner lists, and groups floor markers in one pass. Feature behavior and settings are unchanged by these optimizations.
+
 Unique missing rows disappear after one catch per species; verified empty Rockmite mounds/Snoozle walls also complete their zero-spawn species. Progress retains required sparkle checks and trusts inherited fd/cd claims, with remaining Cavern structures overriding the corresponding claim. Party fd can complete Macaw progress without a capture. Unique announces fd/cd only and hides every captured species’ critter ESP, while unfinished nest/mound/wall helpers remain. Personal PBs still use personal catches.
 
 - **Teammate ESP:** independent Safari-helper toggles outline loaded party members and show distance-scaled names through walls anywhere in SkyBlock. Both default on; party matching uses UUIDs.

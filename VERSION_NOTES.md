@@ -1,3 +1,9 @@
+## v3 development — rendering optimization
+
+- Cache decoded texture profiles with bounded storage; changed profiles and oversized inputs retain their original parsing behavior.
+- Remove temporary corner/endpoint lists from ESP outlines and temporary per-group marker lists from floor-drop grouping.
+- Preserve outline vertices, normals, grouping order, visibility rules and all features. Regression tests cover cache eviction, invalid/changed inputs, degenerate geometry and marker grouping; in-game FPS has not been measured.
+
 ## v3 development — Unique completion
 
 - Verified empty Cavern mounds/walls complete zero-spawn Rockmite/Snoozle progress and remove their missing rows; sightings or remaining structures revoke the exception.
