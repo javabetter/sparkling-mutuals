@@ -23,6 +23,7 @@ class SafariSettings : Config() {
     @JvmField @Category(name = "Modes", desc = "") val modes = Modes()
     @JvmField @Category(name = "Party commands", desc = "") val party = Party()
     @JvmField @Category(name = "Miria contest", desc = "") val miria = Miria()
+    @JvmField @Category(name = "History", desc = "") val history = History()
     @JvmField @Category(name = "Warp reminders", desc = "") val warp = Warp()
     @JvmField @Category(name = "Safari helpers", desc = "") val safari = Safari()
     @JvmField @Category(name = "Safari progress", desc = "") val tracking = Tracking()
@@ -117,6 +118,20 @@ class SafariSettings : Config() {
         @ConfigEditorText var sound = ContestConfig.contestSound
         @JvmField @ConfigOption(name = "Save sound", desc = "Apply the warning sound.")
         @ConfigEditorButton(runnableId = 7, buttonText = "Save sound") var saveSound = false
+    }
+    class History {
+        @JvmField @ConfigOption(name = "Save runs", desc = "Record every Safari run for /sm history: captures, shards, sparklings, splits.")
+        @ConfigEditorBoolean var runs = ConfigManager.runHistory
+        @JvmField @ConfigOption(name = "Import logs on launch", desc = "Save runs from your last session's log when the game starts. Minecraft keeps only 7 logs a day.")
+        @ConfigEditorBoolean var autoImport = ConfigManager.autoImportLogs
+        @JvmField @ConfigOption(name = "Achievements", desc = "Unlock achievements as you play (/sm achievements).")
+        @ConfigEditorBoolean var achievements = ConfigManager.achievements
+        @JvmField @ConfigOption(name = "Achievement sound", desc = "Play a sound when an achievement unlocks.")
+        @ConfigEditorBoolean var sound = ConfigManager.achievementSound
+        @JvmField @ConfigOption(name = "Achievements to party", desc = "Also say \"Achievement unlocked: X!\" in party chat.")
+        @ConfigEditorBoolean var toParty = ConfigManager.achievementsToParty
+        @JvmField @ConfigOption(name = "Open history", desc = "Runs, bests, sparklings, achievements and stats.")
+        @ConfigEditorButton(runnableId = 10, buttonText = "Open") var open = false
     }
     class Warp {
         @JvmField @ConfigOption(name = "Warp reminder", desc = "Remind you to warp party leechers in before entry closes.")
@@ -219,9 +234,10 @@ class SafariSettings : Config() {
             7 -> saveSound()
             8 -> { apply(); client.execute { client.setScreen(CatchCountScreen(client.screen)) } }
             9 -> { apply(); if (saveSparklingSound()) net.johnceo.sparklingmutuals.safari.SparklingEncounters.playSound(client) }
+            10 -> { apply(); client.execute { client.setScreen(net.johnceo.sparklingmutuals.history.HistoryScreen(client.screen)) } }
         }
     }
-    override fun isValidRunnable(id: Int) = id in 1..9
+    override fun isValidRunnable(id: Int) = id in 1..10
     private fun saveDelay() {
         val seconds = warp.delay.trim().toIntOrNull()
         if (seconds == null || seconds !in 1..86400) feedback("Enter a delay from 1 to 86400 seconds.")
@@ -254,7 +270,7 @@ class SafariSettings : Config() {
             ConfigManager::missingPanel to tracking.missing,
             ConfigManager::removeDarkness to safari.darkness,
             ConfigManager::sparklingAlert to safari.alert, ConfigManager::sparklingPartyAnnouncer to safari.announce,
-            ConfigManager::autoClicker to safari.autoClicker, ConfigManager::candleHitbox to safari.candleHitbox, ConfigManager::hideCaptureChat to safari.hideCaptureChat,
+            ConfigManager::autoClicker to safari.autoClicker, ConfigManager::candleHitbox to safari.candleHitbox, ConfigManager::runHistory to history.runs, ConfigManager::autoImportLogs to history.autoImport, ConfigManager::achievements to history.achievements, ConfigManager::achievementSound to history.sound, ConfigManager::achievementsToParty to history.toParty, ConfigManager::hideCaptureChat to safari.hideCaptureChat,
             ConfigManager::allGemsAlert to safari.alerts.gems, ConfigManager::allBirdFoodAlert to safari.alerts.birdFood,
             ConfigManager::allIncenseAlert to safari.alerts.incense, ConfigManager::runCompleteAlert to safari.alerts.runComplete,
             ConfigManager::hideGroundCapsules to safari.hideGroundCapsules, ConfigManager::hideFlyingCapsules to safari.hideFlyingCapsules)
