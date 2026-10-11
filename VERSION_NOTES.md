@@ -1,3 +1,8 @@
+## v3 development — teammate ESP
+
+- Add independent Highlight teammates and Show teammate names toggles under Safari helpers, both enabled by default. Noamm-style outlines and distance-scaled through-wall names work for loaded party players throughout SkyBlock.
+- Exclude the local player, unrelated players and unknown/stale party rosters. Settings persist across restarts. Live rendering and server party changes still need in-game validation.
+
 ## v3 development — failed API retries
 
 - Retain failed API party commands and discovery refreshes for a retry three minutes after failure. API key changes through the command or GUI wake failed work on the next client tick; repeated failures restart the delay.

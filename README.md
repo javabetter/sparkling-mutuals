@@ -1,5 +1,7 @@
 # Sparkling Mutuals
 
+- **Teammate ESP:** independent Safari-helper toggles outline loaded party members and show distance-scaled names through walls anywhere in SkyBlock. Both default on; party matching uses UUIDs.
+
 Failed API party commands and discovery refreshes retry after three minutes. Updating the API key through `/apikey` or the settings GUI retries failed work on the next client tick. Party retries are canceled when the connection, roster or Safari mode changes, commands are disabled, or another party client has already answered.
 
 Sparkling Forest birds complete after nine feeder announcements plus any extra bird food held during the run’s first three seconds. A two-Macaw announcement counts as one feeding. Full Clear retains Forest/Haunted floor drops and unpunched nests despite party discoveries or clear claims; Cavern drops remain until all three gems are held together, and intact walls/mounds remain highlighted.
