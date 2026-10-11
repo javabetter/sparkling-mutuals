@@ -35,6 +35,7 @@ object SparklingMutuals : ModInitializer {
         PartyCommands.register()
 		ApiKeyCommand.register()
 		SparklingCommand.register()
+		SparklingLookup.register()
 		AlertCommand.register()
 
 		PartyManager.init()

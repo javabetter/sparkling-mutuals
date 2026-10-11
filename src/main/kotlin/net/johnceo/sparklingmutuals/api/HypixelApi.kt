@@ -48,6 +48,10 @@ object HypixelApi {
         }
     }
 
+    fun getSafariProfile(playerUuid: String): SafariProfile = data {
+        SafariProfile.from(getMember(playerUuid, getCurrentProfileUuid(playerUuid)))
+    }
+
     private fun getMember(playerUuid: String, profileUuid: String): JsonObject = data {
         get("https://api.hypixel.net/v2/skyblock/profile?profile=$profileUuid")
             .getAsJsonObject("profile")?.getAsJsonObject("members")
