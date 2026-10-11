@@ -24,7 +24,7 @@ enum class AchievementTier(val code: String, val argb: Int) {
 }
 
 /** What an achievement is measured against; anything but EVENT gets a progress bar. */
-enum class Measure { EVENT, RUNS, HOURS, CAUGHT, OWN_SPARKLINGS, UNIQUES, DRY_SPARKLING, DRY_UNIQUE, RUNS_SINCE_MACAW, CONTESTS, EMBLEMS }
+enum class Measure { EVENT, RUNS, HOURS, CAUGHT, COINS, OWN_SPARKLINGS, UNIQUES, DRY_SPARKLING, DRY_UNIQUE, RUNS_SINCE_MACAW, CONTESTS, EMBLEMS }
 
 data class Achievement(val id: String, val name: String, val description: String, val tier: AchievementTier,
     val measure: Measure = Measure.EVENT, val goal: Long = 1, val secret: Boolean = false) {
@@ -87,6 +87,8 @@ object Achievements {
         Achievement("party_caught_10000", "Exterminator", "Your party catches 10,000 critters with you.", AchievementTier.EPIC, Measure.CAUGHT, 10000),
         Achievement("party_caught_25000", "Critter Apocalypse", "Your party catches 25,000 critters with you.", AchievementTier.LEGENDARY, Measure.CAUGHT, 25000),
         Achievement("party_caught_50000", "Extinction Event", "Your party catches 50,000 critters with you.", AchievementTier.MYTHIC, Measure.CAUGHT, 50000),
+        Achievement("coins_100m", "Shard Shark", "Earn 100M coins of shards and feathers from runs.", AchievementTier.RARE, Measure.COINS, 100_000_000L),
+        Achievement("coins_1b", "Shard Tycoon", "Earn 1B coins of shards and feathers from runs.", AchievementTier.LEGENDARY, Measure.COINS, 1_000_000_000L),
         Achievement("full_house", "Full House", "Your party secures all 37 critters in a run.", AchievementTier.UNCOMMON),
         Achievement("speed_3", "Speedrunner", "Secure all 37 critters in a run under 3:00.", AchievementTier.EPIC),
         Achievement("speed_230", "Any%", "Secure all 37 critters in a run under 2:30.", AchievementTier.LEGENDARY),
@@ -223,6 +225,7 @@ object Achievements {
         Measure.RUNS -> RunHistory.runs.size.toLong()
         Measure.HOURS -> PlaytimeReader.safariMillis() / 3_600_000L
         Measure.CAUGHT -> RunHistory.runs.sumOf { (it.caught + it.lootShares).toLong() }
+        Measure.COINS -> RunHistory.runs.sumOf { maxOf(0L, it.coins) }
         Measure.OWN_SPARKLINGS -> ownEntries().size.toLong()
         Measure.UNIQUES -> ownDex().size.toLong()
         Measure.DRY_SPARKLING -> maxOf(data.longestRunsWithoutSparkling, data.runsSinceOwnSparkling).toLong()

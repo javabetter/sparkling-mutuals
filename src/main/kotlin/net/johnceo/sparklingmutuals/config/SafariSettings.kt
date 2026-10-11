@@ -124,6 +124,8 @@ class SafariSettings : Config() {
         @ConfigEditorBoolean var runs = ConfigManager.runHistory
         @JvmField @ConfigOption(name = "Import logs on launch", desc = "Save runs from your last session's log when the game starts. Minecraft keeps only 7 logs a day.")
         @ConfigEditorBoolean var autoImport = ConfigManager.autoImportLogs
+        @JvmField @ConfigOption(name = "Coins at insta-sell", desc = "Value shards and feathers at the bazaar's instant-sell price instead of the sell-offer price.")
+        @ConfigEditorBoolean var instaSell = ConfigManager.runCoinsInstaSell
         @JvmField @ConfigOption(name = "Achievements", desc = "Unlock achievements as you play (/sm achievements).")
         @ConfigEditorBoolean var achievements = ConfigManager.achievements
         @JvmField @ConfigOption(name = "Achievement sound", desc = "Play a sound when an achievement unlocks.")
@@ -270,7 +272,7 @@ class SafariSettings : Config() {
             ConfigManager::missingPanel to tracking.missing,
             ConfigManager::removeDarkness to safari.darkness,
             ConfigManager::sparklingAlert to safari.alert, ConfigManager::sparklingPartyAnnouncer to safari.announce,
-            ConfigManager::autoClicker to safari.autoClicker, ConfigManager::candleHitbox to safari.candleHitbox, ConfigManager::runHistory to history.runs, ConfigManager::autoImportLogs to history.autoImport, ConfigManager::achievements to history.achievements, ConfigManager::achievementSound to history.sound, ConfigManager::achievementsToParty to history.toParty, ConfigManager::hideCaptureChat to safari.hideCaptureChat,
+            ConfigManager::autoClicker to safari.autoClicker, ConfigManager::candleHitbox to safari.candleHitbox, ConfigManager::runHistory to history.runs, ConfigManager::autoImportLogs to history.autoImport, ConfigManager::runCoinsInstaSell to history.instaSell, ConfigManager::achievements to history.achievements, ConfigManager::achievementSound to history.sound, ConfigManager::achievementsToParty to history.toParty, ConfigManager::hideCaptureChat to safari.hideCaptureChat,
             ConfigManager::allGemsAlert to safari.alerts.gems, ConfigManager::allBirdFoodAlert to safari.alerts.birdFood,
             ConfigManager::allIncenseAlert to safari.alerts.incense, ConfigManager::runCompleteAlert to safari.alerts.runComplete,
             ConfigManager::hideGroundCapsules to safari.hideGroundCapsules, ConfigManager::hideFlyingCapsules to safari.hideFlyingCapsules)

@@ -35,6 +35,8 @@ class RunRecord(
     var splits: MutableMap<String, Long> = linkedMapOf(),
     /** Rebuilt from old logs: no splits, and the party count is what the logs showed. */
     var imported: Boolean = false,
+    /** Shards and Rainbow Feathers at bazaar prices when the run ended; -1 until prices load. */
+    var coins: Long = -1,
 ) {
     fun hasSparkling() = sparklings.isNotEmpty()
 }

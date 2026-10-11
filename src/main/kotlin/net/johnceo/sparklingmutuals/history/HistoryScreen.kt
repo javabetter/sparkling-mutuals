@@ -21,9 +21,9 @@ import java.util.Locale
 class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS) : Screen(Component.literal("Sparkling Mutuals history")) {
     enum class Tab(val label: String, val colour: Int) {
         RUNS("Runs", 0xFF55CC66.toInt()), BESTS("Bests", 0xFF55DDDD.toInt()), SPARKLINGS("Sparklings", 0xFFFF77DD.toInt()),
-        ACHIEVEMENTS("Achievements", 0xFFFFAA22.toInt()), STATS("Stats", 0xFF7799FF.toInt())
+        ACHIEVEMENTS("Achievements", 0xFFFFAA22.toInt()), STATS("Stats", 0xFF7799FF.toInt()), PROFIT("Profit", 0xFFFFD84A.toInt())
     }
-    private enum class RunSort(val label: String) { NEWEST("Newest"), OLDEST("Oldest"), FASTEST("Fastest"), LONGEST("Longest"), CAUGHT("Most caught"), PARTY("Party dex"), YOU("Your dex") }
+    private enum class RunSort(val label: String) { NEWEST("Newest"), OLDEST("Oldest"), FASTEST("Fastest"), LONGEST("Longest"), CAUGHT("Most caught"), COINS("Most coins"), PARTY("Party dex"), YOU("Your dex") }
     private enum class Filter(val label: String) { ALL("All"), UNLOCKED("Unlocked"), LOCKED("Locked") }
     private enum class AchievementSort(val label: String) { DEFAULT("Unlocked first"), RARITY_UP("Rarity: low"), RARITY_DOWN("Rarity: high"), CLOSEST("Closest"), RECENT("Recent"), NAME("Name") }
     private class Hit(val x: Int, val y: Int, val w: Int, val h: Int, val action: () -> Unit) {
@@ -58,6 +58,7 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
             Tab.SPARKLINGS -> sparklings(g, mouseX, mouseY)
             Tab.ACHIEVEMENTS -> achievements(g, mouseX, mouseY)
             Tab.STATS -> stats(g)
+            Tab.PROFIT -> profit(g, mouseX, mouseY)
         }
         button(g, mouseX, mouseY, px + pw - 66, py + ph - 20, 58, "Close", ::onClose)
     }
@@ -71,7 +72,12 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
             val hover = mx in x until x + tabW && my in y until y + 18
             g.fill(x, y, x + tabW, y + 18, if (on) t.colour and 0xFFFFFF or 0xD0000000.toInt() else if (hover) 0xC0302820.toInt() else 0xC0181410.toInt())
             g.outline(x, y, tabW, 18, t.colour)
-            g.text(font, t.label, x + (tabW - font.width(t.label)) / 2, y + 5, if (on) 0xFF101010.toInt() else TEXT, !on)
+            // A label wider than its tab is shrunk to fit, so every tab stays readable in a narrow window.
+            val scale = minOf(1f, (tabW - 6f) / font.width(t.label))
+            val pose = g.pose()
+            pose.pushMatrix(); pose.translate(x + tabW / 2f, y + 9f - 4f * scale); pose.scale(scale, scale)
+            g.text(font, t.label, -font.width(t.label) / 2, 0, if (on) 0xFF101010.toInt() else TEXT, !on)
+            pose.popMatrix()
             hits += Hit(x, y, tabW, 18) { tab = t }
             x += tabW + 6
         }
@@ -88,6 +94,7 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
             RunSort.FASTEST -> runs.sortedBy { if (it.party >= all) it.length else Long.MAX_VALUE / 2 + it.length }
             RunSort.LONGEST -> runs.sortedByDescending { it.length }
             RunSort.CAUGHT -> runs.sortedByDescending { it.caught }
+            RunSort.COINS -> runs.sortedByDescending { it.coins }
             RunSort.PARTY -> runs.sortedByDescending { it.party }
             RunSort.YOU -> runs.sortedByDescending { it.you }
         }
@@ -100,8 +107,8 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
         g.text(font, "Saved Runs", px + 8, py + 6, GOLD)
         "${all.size} Kept".let { g.text(font, it, px + pw - 8 - font.width(it), py + 6, MUTED) }
         centred(g, "§f${all.size} Runs  §8·  §f${hours(all.sumOf { it.length })} Played  §8·  §f" +
-            "%,d".format(all.sumOf { it.caught }) + " Caught", px + pw / 2, py + 19, TEXT)
-        val headers = listOf("Run", "When", "Length", "Party", "You", "Caught", "Sparklings")
+            "%,d".format(all.sumOf { it.caught }) + " Caught  §8·  §e" + BazaarPrices.format(all.sumOf { maxOf(0L, it.coins) }) + " Coins", px + pw / 2, py + 19, TEXT)
+        val headers = listOf("Run", "When", "Length", "Party", "You", "Caught", "Coins")
         val at = floatArrayOf(.08f, .24f, .40f, .52f, .63f, .74f, .88f)
         val headerY = py + 33
         headers.forEachIndexed { i, h -> centred(g, h, px + Math.round(pw * at[i]), headerY, 0xFFDDDDDD.toInt()) }
@@ -116,13 +123,13 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
             val hover = mx in px + 4 until px + pw - 4 && my in y - 1 until y + ROW - 1
             if (index == selectedRun || hover) g.fill(px + 4, y - 1, px + pw - 4, y + ROW - 1, if (index == selectedRun) 0x40FFFFFF else 0x18FFFFFF)
             val cells = listOf("#${run.number}", WHEN.format(Instant.ofEpochMilli(run.start).atZone(ZoneId.systemDefault())), clock(run.length),
-                "${run.party}/$total", "${run.you}/$total", run.caught.toString(), if (run.hasSparkling()) "✦ ${run.sparklings.size}" else "-")
+                "${run.party}/$total", "${run.you}/$total", run.caught.toString(), BazaarPrices.format(run.coins))
             if (run.hasSparkling()) {
                 // A sparkling run shimmers in a rainbow, one colour per character across the whole row.
                 rainbow(g, "✦", px + 8, y); rainbow(g, "✦", px + pw - 14, y)
                 cells.forEachIndexed { c, text -> rainbow(g, text, px + Math.round(pw * at[c]) - font.width(text) / 2, y) }
             } else {
-                val colours = intArrayOf(TEXT, TEXT, MUTED, if (run.party >= total) 0xFF55FF55.toInt() else 0xFFDDDDDD.toInt(), 0xFF77BBFF.toInt(), 0xFF88DD88.toInt(), DIM)
+                val colours = intArrayOf(TEXT, TEXT, MUTED, if (run.party >= total) 0xFF55FF55.toInt() else 0xFFDDDDDD.toInt(), 0xFF77BBFF.toInt(), 0xFF88DD88.toInt(), GOLD)
                 cells.forEachIndexed { c, text -> centred(g, text, px + Math.round(pw * at[c]), y, colours[c]) }
             }
             hits += Hit(px + 4, y - 1, pw - 8, ROW) { selectedRun = if (selectedRun == index) -1 else index }
@@ -189,6 +196,7 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
         }
         runs.filter { it.party >= all }.minByOrNull { it.length }.let { record("Fastest full run", it?.let { r -> clock(r.length) }, it) }
         runs.maxByOrNull { it.caught }.let { record("Most caught", it?.caught?.toString(), it) }
+        runs.filter { it.coins >= 0 }.maxByOrNull { it.coins }.let { record("Most coins", it?.let { r -> BazaarPrices.format(r.coins) }, it) }
         runs.maxByOrNull { it.you }.let { record("Best own dex", it?.let { r -> "${r.you}/$all" }, it) }
         runs.filter { it.hasSparkling() }.maxByOrNull { it.sparklings.size }.let { record("Sparklings", it?.sparklings?.size?.toString(), it) }
         runs.filter { it.macaws > 0 }.maxByOrNull { it.macaws }.let { record("Macaws", it?.macaws?.toString(), it) }
@@ -345,6 +353,8 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
             "Loot shares" to "%,d".format(runs.sumOf { it.lootShares }),
             "Shards" to "%,d".format(runs.sumOf { r -> r.shards.values.sum() }),
             "Rainbow Feathers" to "${runs.sumOf { it.feathers }}",
+            "Shard + feather value" to "§e" + BazaarPrices.format(runs.sumOf { maxOf(0L, it.coins) }) +
+                if (played > 0) " §7· " + BazaarPrices.format(runs.sumOf { maxOf(0L, it.coins) } * 3_600_000L / played) + "/h" else "",
             "Tickets (in runs)" to "%,d".format(runs.sumOf { it.tickets }),
             "Sparklings (you / seen)" to "${SparklingLog.entries.count { it.player.equals(self, true) }} / ${SparklingLog.entries.size}",
             "Sparkling dex" to "${Achievements.ownDex().size}/$all",
@@ -376,6 +386,43 @@ class HistoryScreen(private val parent: Screen?, private var tab: Tab = Tab.RUNS
             by += 11
         }
         if (top.isEmpty()) g.text(font, "§7Nothing yet.", bx, by, MUTED)
+    }
+
+    // ------------------------------------------------------------------ profit
+
+    private fun profit(g: GuiGraphicsExtractor, mx: Int, my: Int) {
+        val runs = RunHistory.runs
+        val days = ProfitDays.of(runs)
+        val coins = runs.sumOf { maxOf(0L, it.coins) }
+        val played = runs.sumOf { it.length }
+        g.text(font, "Profit", px + 8, py + 6, GOLD)
+        (if (ConfigManager.runCoinsInstaSell) "Insta-sell prices" else "Sell-offer prices").let { g.text(font, "§7$it", px + pw - 8 - font.width(it), py + 6, MUTED) }
+        centred(g, "§e${BazaarPrices.format(coins)} §7total  §8·  §e${if (played > 0) BazaarPrices.format(coins * 3_600_000L / played) else "-"} §7an hour  §8·  §e" +
+            "${if (runs.isEmpty()) "-" else BazaarPrices.format(coins / runs.size)} §7a run  §8·  §d${runs.sumOf { it.feathers }} §7Rainbow Feathers", px + pw / 2, py + 19, TEXT)
+        val headers = listOf("Day", "Runs", "Time", "Coins", "Per hour", "Best run")
+        val at = floatArrayOf(.10f, .26f, .40f, .55f, .71f, .87f)
+        val headerY = py + 33
+        headers.forEachIndexed { i, h -> centred(g, h, px + Math.round(pw * at[i]), headerY, 0xFFDDDDDD.toInt()) }
+        listTop = headerY + 12; listBottom = py + ph - 26; listRows = maxOf(1, (listBottom - listTop) / ROW); listSize = days.size
+        val offset = clampScroll(Tab.PROFIT)
+        if (!BazaarPrices.ready() && runs.any { it.coins < 0 }) centred(g, "§7Loading bazaar prices...", px + pw / 2, listTop + 20, MUTED)
+        else if (days.isEmpty()) centred(g, "§7No runs yet.", px + pw / 2, listTop + 20, MUTED)
+        val best = days.maxOfOrNull { it.coins } ?: 0
+        for (i in 0 until listRows) {
+            val day = days.getOrNull(offset + i) ?: break
+            val y = listTop + i * ROW
+            // The best day stands out, so a good session is easy to find.
+            if (day.coins == best && best > 0) g.fill(px + 4, y - 1, px + pw - 4, y + ROW - 1, 0x22FFD84A)
+            val cells = listOf(DAY.format(day.date), "${day.runs}", hours(day.millis), BazaarPrices.format(day.coins),
+                BazaarPrices.format(day.perHour), day.best?.let { "#${it.number} ${BazaarPrices.format(it.coins)}" } ?: "-")
+            val colours = intArrayOf(TEXT, MUTED, MUTED, GOLD, 0xFFFFE08A.toInt(), 0xFF88DD88.toInt())
+            cells.forEachIndexed { c, text -> centred(g, text, px + Math.round(pw * at[c]), y, colours[c]) }
+        }
+        scrollbar(g, offset, px + pw - 8)
+        button(g, mx, my, px + 8, py + ph - 20, 140, if (ConfigManager.runCoinsInstaSell) "Price: insta-sell" else "Price: sell offer") {
+            ConfigManager.runCoinsInstaSell = !ConfigManager.runCoinsInstaSell; ConfigManager.save()
+            RunHistory.runs.forEach { it.coins = BazaarPrices.value(it.shards, it.feathers) }; RunHistory.save()
+        }
     }
 
     // ------------------------------------------------------------------ widgets

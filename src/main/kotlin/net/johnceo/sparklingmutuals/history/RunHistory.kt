@@ -30,6 +30,7 @@ object RunHistory {
 
     fun register() {
         data = HistoryStore.load("runs", Data::class.java, ::Data).also { d -> d.runs.sortByDescending { it.start } }
+        BazaarPrices.ensureFresh()
         ClientReceiveMessageEvents.GAME.register { message, overlay ->
             if (!overlay) Minecraft.getInstance().execute { chat(message.string) }
         }
@@ -69,6 +70,7 @@ object RunHistory {
             tickets = tickets, shards = LinkedHashMap(tally.shards), catches = LinkedHashMap(tally.catches),
             feathers = tally.feathers, sparklings = tally.sparklings.toMutableList(), ownSparklings = tally.ownSparklings,
             macaws = tally.macaws, splits = LinkedHashMap(splits))
+        record.coins = BazaarPrices.value(record.shards, record.feathers)
         record.number = data.nextNumber++
         data.runs.add(0, record)
         save()
@@ -80,10 +82,18 @@ object RunHistory {
      * came from an earlier import, which this reading replaces. Everything is then numbered oldest first.
      */
     fun importRuns(found: List<RunRecord>): Int {
+        found.forEach { it.coins = BazaarPrices.value(it.shards, it.feathers) }
         val added = HistoryMerge.merge(data.runs, found)
         data.nextNumber = data.runs.size + 1
         save()
         return added
+    }
+
+    /** Fills in coins for runs saved before the prices had loaded. */
+    fun fillMissingCoins() {
+        val missing = data.runs.filter { it.coins < 0 }
+        missing.forEach { it.coins = BazaarPrices.value(it.shards, it.feathers) }
+        if (missing.any { it.coins >= 0 }) save()
     }
 
     fun save() = HistoryStore.save("runs", data)
