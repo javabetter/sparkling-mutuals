@@ -62,6 +62,10 @@ object SafariTracking {
         SafariAssist.markEntered()
         ensureRun(client)
         ledger.current!!.record(catch)
+        if (SafariFullClear.mode == SafariMode.UNIQUE)
+            ConfigManager.personalBests.recordPartyUnique(catch.critter.biome, ledger.current!!, now)?.let { notice ->
+                ConfigManager.save(); client.player?.sendSystemMessage(LocalChat.component(notice))
+            }
         if (catch.personal) {
             SafariEsp.caught(catch.critter.name)
             ConfigManager.personalBests.recordUnique(catch.critter.biome, ledger.current!!, now)?.let { notice ->

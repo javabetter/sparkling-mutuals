@@ -62,6 +62,9 @@ class SafariPersonalBests {
     @Volatile private var wumpaDuo: Long? = null
     private val biomes = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val uniqueBiomes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Unique Run times for the whole party: every critter of the biome secured, teammates' catches included. */
+    private val partyUniqueBiomes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    fun partyTime(biome: String) = partyUniqueBiomes[biome]
     @Volatile var biomeType = BiomePbType.FULL_CLEAR
         private set
     fun selectBiomeType(type: BiomePbType) { biomeType = type }
@@ -105,6 +108,20 @@ class SafariPersonalBests {
         run.uniqueBiomeClears.add(biome)
         return recordBiome(biome, run, now, BiomePbType.UNIQUE)
     }
+    /**
+     * The party's Unique Run PB: from run start until every critter of the biome is secured by anyone (loot shares
+     * count), or proven absent. A biome the party cleared before you arrived isn't timed.
+     */
+    fun recordPartyUnique(biome: SafariBiome, run: SafariRun, now: Long): String? {
+        if (run.endedAt != null || now < run.startedAt || biome in run.partyUniqueClears || run.inherited(biome) ||
+            biome.critters.any { run.count(it.name) == 0 && !run.uniqueUnavailable(it.name) }) return null
+        run.partyUniqueClears.add(biome)
+        val elapsed = now - run.startedAt
+        val best = partyUniqueBiomes[biome.label]
+        if (best != null && elapsed >= best) return null
+        partyUniqueBiomes[biome.label] = elapsed
+        return "[SM] New ${biome.label} ${BiomePbType.UNIQUE.label} Party PB: ${formatTime(elapsed)}!"
+    }
     fun recordBiome(biome: SafariBiome, run: SafariRun, now: Long, type: BiomePbType = BiomePbType.FULL_CLEAR): String? {
         if (run.endedAt != null || now < run.startedAt) return null
         val elapsed = now - run.startedAt
@@ -130,10 +147,11 @@ class SafariPersonalBests {
         doomDuo = read("duo.doomspiral") ?: read("doomspiral")
         wumpaDuo = read("duo.wumpa") ?: read("wumpa")
         biomeType = BiomePbType.entries.firstOrNull { it.name == properties.getProperty("pb.biomeType") } ?: BiomePbType.FULL_CLEAR
-        biomes.clear(); uniqueBiomes.clear()
+        biomes.clear(); uniqueBiomes.clear(); partyUniqueBiomes.clear()
         SafariBiome.entries.forEach { biome ->
             read(biome.label.lowercase())?.let { biomes[biome.label] = it }
             read("unique.${biome.label.lowercase()}")?.let { uniqueBiomes[biome.label] = it }
+            read("uniqueParty.${biome.label.lowercase()}")?.let { partyUniqueBiomes[biome.label] = it }
         }
     }
     @Synchronized fun save(properties: Properties) {
@@ -145,6 +163,7 @@ class SafariPersonalBests {
         }
         biomes.forEach { (name, time) -> properties.setProperty("pb.${name.lowercase()}Millis", time.toString()) }
         uniqueBiomes.forEach { (name, time) -> properties.setProperty("pb.unique.${name.lowercase()}Millis", time.toString()) }
+        partyUniqueBiomes.forEach { (name, time) -> properties.setProperty("pb.uniqueParty.${name.lowercase()}Millis", time.toString()) }
         properties.setProperty("pb.biomeType", biomeType.name)
         doom?.let { properties.setProperty("pb.solo.doomspiralMillis", it.toString()) }
         wumpa?.let { properties.setProperty("pb.solo.wumpaMillis", it.toString()) }
@@ -153,7 +172,10 @@ class SafariPersonalBests {
     }
     fun response(player: String, species: String, duo: Boolean = false): String {
         val formatted = time(species, biomeType, duo)?.let(::formatTime) ?: "Not recorded yet"
-        val type = if (SafariBiome.entries.any { it.label == species }) " ${biomeType.label}" else if (duo) " Duo" else ""
-        return "$player's $species$type PB: $formatted"
+        val biome = SafariBiome.entries.any { it.label == species }
+        val type = if (biome) " ${biomeType.label}" else if (duo) " Duo" else ""
+        // In Unique mode the party's time for the biome rides along when there is one.
+        val party = if (biome && biomeType == BiomePbType.UNIQUE) partyUniqueBiomes[species]?.let { " | Party PB: ${formatTime(it)}" } ?: "" else ""
+        return "$player's $species$type PB: $formatted$party"
     }
 }
