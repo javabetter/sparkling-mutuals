@@ -1,3 +1,9 @@
+## v3 development — failed API retries
+
+- Retain failed API party commands and discovery refreshes for a retry three minutes after failure. API key changes through the command or GUI wake failed work on the next client tick; repeated failures restart the delay.
+- Preserve command/party context and reply suppression. Cancel stale party retries on connection, roster or mode changes and when commands are disabled; discard results fetched with an outdated key.
+- Regression coverage verifies delay boundaries, key replacement, independent operations and cancellation/reset. Live expired-key recovery and delayed party replies still need in-game testing.
+
 ## v3 development — bird targets and Full Clear spawning supplies
 
 - Sparkling Forest birds require nine feeder announcements plus starting bird food observed during the first three seconds. Repeated scans and already recorded floor pickups do not inflate the extra food; a Macaw pair uses one feeding.

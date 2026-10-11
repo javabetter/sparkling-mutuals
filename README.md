@@ -1,5 +1,7 @@
 # Sparkling Mutuals
 
+Failed API party commands and discovery refreshes retry after three minutes. Updating the API key through `/apikey` or the settings GUI retries failed work on the next client tick. Party retries are canceled when the connection, roster or Safari mode changes, commands are disabled, or another party client has already answered.
+
 Sparkling Forest birds complete after nine feeder announcements plus any extra bird food held during the run’s first three seconds. A two-Macaw announcement counts as one feeding. Full Clear retains Forest/Haunted floor drops and unpunched nests despite party discoveries or clear claims; Cavern drops remain until all three gems are held together, and intact walls/mounds remain highlighted.
 
 Cavern completion uses species confirmation zones in Full Clear (capture minimums plus no remaining entities) and Sparkling (distinct UUID minimums). Cavernfish/Flitter/Shyworm/Gemzie use 30/40-block Full Clear/Sparkling radii; Driftling/Chuckwalla use 40/60. Centers: Cavernfish (-85,81), Flitter (-84,62), Shyworm (-119,43), Gemzie (-141,51), Driftling (-120,55), Chuckwalla (-100,45). Scrappy needs three UUIDs, plus three captures in Full Clear. Existing mound and wall requirements remain. Sparkling keeps Driftling ESP, hides Rockmite silverfish and Shyworm helpers, and expires other Cavern ESP after ten seconds per UUID.
