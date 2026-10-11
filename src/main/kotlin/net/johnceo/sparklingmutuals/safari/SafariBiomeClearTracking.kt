@@ -25,7 +25,7 @@ object SafariBiomeClearTracking {
         }.map { if (it.mound) "Rockmite Mound" else it.species }.toSet(),
             SafariStructures.walls.states.size == 5 && SafariStructures.walls.allBroken, BeeNests.allChecked,
             macawsInRange = snapshot.critters.count { it.biome == biome && it.species == "Macaw" },
-            playerX = player.x, playerZ = player.z)
+            playerX = player.x, playerZ = player.z, nestsPunched = BeeNests.punchedCount)
         run.sparklingChecks.scan(biome, player.x, player.z,
             snapshot.critters.filterNot { it.mound }.map { it.species to it.uuid },
             nestsChecked = BeeNests.allChecked,

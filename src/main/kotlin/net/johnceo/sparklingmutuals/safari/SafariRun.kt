@@ -99,11 +99,25 @@ class SafariRun(val startedAt: Long) {
     }
     fun completed(mode: SafariMode, critters: List<SafariCritter>, party: PartySparklingState, localOnly: Boolean = false): Int =
         critters.count { when (mode) {
-            SafariMode.UNIQUE -> count(it.name) > 0
+            SafariMode.UNIQUE -> uniqueComplete(it.name, party, localOnly)
             SafariMode.FULL_CLEAR -> (!localOnly && it.biome in partyFullClears) || captureComplete(it.name)
             SafariMode.SPARKLING -> sparklingComplete(it.name, party, localOnly)
         } }
     val completion = SafariCompletionEvents()
+    /** Unique captures and sparkle checks share one HUD/announcement rule; PBs still use personal catches. */
+    fun uniqueComplete(name: String, party: PartySparklingState, localOnly: Boolean = false): Boolean {
+        if (count(name) == 0) return false
+        val critter = SafariRoster.named(name) ?: return false
+        if (name !in uniqueChecks) return true
+        if (critter.biome !in visited) return !localOnly &&
+            (critter.biome in communalClears || sparklingChecks.partyChecked(name))
+        return when (name) {
+            "Honeybug" -> !party.needs(name) || nestsChecked && punchedNests >= 3 && sparklingChecks.locallyChecked(name)
+            "Rockmite", "Snoozle" -> !party.needs(name) || sparklingChecks.locallyChecked(name)
+            else -> !birdSpecies.any { party.needs(it) } || birds.used >= maxOf(birds.sparklingTarget, birds.collected)
+        }
+    }
+    private val uniqueChecks = setOf("Honeybug", "Rockmite", "Snoozle", "Bluebird", "Parakeet", "Macaw")
     private val sightings = mutableSetOf<String>()
     private val observedCritters = mutableMapOf<String, MutableSet<Int>>()
     private val observedUuids = mutableMapOf<String, MutableSet<java.util.UUID>>()
@@ -114,17 +128,18 @@ class SafariRun(val startedAt: Long) {
     private val nearby = mutableMapOf<SafariBiome, Set<String>>()
     private var wallsChecked = false
     private var nestsChecked = false
+    private var punchedNests = 0
     private val birdSpecies = setOf("Bluebird", "Parakeet", "Macaw")
     private var nearbyMacaws = 0
     val birdFoodsComplete get() = birds.foodsComplete
     fun recordBirdFood(raw: String, biome: SafariBiome? = SafariBiome.FOREST) = birds.pickup(raw, biome)
     fun updateCaptureEvidence(biome: SafariBiome, speciesInRange: Set<String>, allWallsChecked: Boolean, allNestsChecked: Boolean = false,
         macawsInRange: Int = if ("Macaw" in speciesInRange) 1 else 0,
-        playerX: Double? = null, playerZ: Double? = null) {
+        playerX: Double? = null, playerZ: Double? = null, nestsPunched: Int = 0) {
         nearby[biome] = speciesInRange
         if (speciesInRange.isNotEmpty()) partyFullClears.remove(biome)
         wallsChecked = allWallsChecked
-        nestsChecked = allNestsChecked
+        if (biome == SafariBiome.FOREST) { nestsChecked = allNestsChecked; punchedNests = nestsPunched }
         if (biome == SafariBiome.FOREST) nearbyMacaws = macawsInRange
         if (SafariCompletionZones.forBiome(biome).isNotEmpty() && playerX != null && playerZ != null) {
             zonesRequired.add(biome)

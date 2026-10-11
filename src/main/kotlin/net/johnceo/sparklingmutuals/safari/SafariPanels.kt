@@ -27,6 +27,7 @@ object SafariPanels {
                 if (run?.sparklingChecks?.wumpaPrerequisite(it.name, party) == true) run.count(it.name) == 0
                 else party.needs(it.name) && run?.sparklingComplete(it.name, party) != true
             }
+            else if (SafariFullClear.mode == SafariMode.UNIQUE) run?.uniqueComplete(it.name, party) != true
             else run?.missing(it, ConfigManager.fullClearMode) != false }
         val rows = missing.map { critter ->
             HudRow(critter.name, if (!sparkling && ConfigManager.fullClearMode && critter.quota > 1) "${run?.count(critter.name) ?: 0}/${critter.quota}" else null,
