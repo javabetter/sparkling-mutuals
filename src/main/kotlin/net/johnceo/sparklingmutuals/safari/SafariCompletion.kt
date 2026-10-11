@@ -13,6 +13,7 @@ class SafariCompletionEvents {
     private val announced = mutableSetOf<Pair<SafariMode, SafariBiome>>()
     private var alerted = false
     fun announcement(run: SafariRun, biome: SafariBiome, mode: SafariMode, party: PartySparklingState): String? {
+        if (mode == SafariMode.UNIQUE && biome in setOf(SafariBiome.ICY, SafariBiome.HAUNTED)) return null
         if (!run.hasCaptureEvidence(biome) || mode == SafariMode.SPARKLING && !party.ready) return null
         val targets = biome.critters.filter { mode != SafariMode.SPARKLING || party.needs(it.name) }
         if (targets.isEmpty() || run.completed(mode, targets, party, localOnly = true) != targets.size ||
@@ -38,7 +39,7 @@ object SafariCompletion {
         val party = SafariSparklingMode.state
         run.completion.announcement(run, biome, mode, party)?.let { queue.addLast(biome to it) }
         // Revalidate queued completions after contradictory local evidence or a mode change.
-        queue.removeAll { (area, _) -> run.completed(mode,
+        queue.removeAll { (area, _) -> mode == SafariMode.UNIQUE && area in setOf(SafariBiome.ICY, SafariBiome.HAUNTED) || run.completed(mode,
             area.critters.filter { mode != SafariMode.SPARKLING || party.needs(it.name) }, party, localOnly = true) !=
             area.critters.count { mode != SafariMode.SPARKLING || party.needs(it.name) } }
         val now = System.currentTimeMillis()

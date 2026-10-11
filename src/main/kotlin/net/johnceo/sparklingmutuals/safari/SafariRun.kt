@@ -64,6 +64,7 @@ class SafariRun(val startedAt: Long) {
     private val counts = mutableMapOf<String, Int>()
     private val personal = mutableMapOf<String, Int>()
     private val visited = mutableSetOf<SafariBiome>()
+    private var startingBiome: SafariBiome? = null
     private val partyFullClears = mutableSetOf<SafariBiome>()
     private val communalClears = mutableSetOf<SafariBiome>()
     fun partyFullClear(raw: String) {
@@ -74,6 +75,7 @@ class SafariRun(val startedAt: Long) {
     }
     private val inheritedBiomes = mutableSetOf<SafariBiome>()
     fun visitBiome(biome: SafariBiome) {
+        if (startingBiome == null) startingBiome = biome
         lastBiome = biome
         if (visited.add(biome) && biome in priorLootShare) inheritedBiomes.add(biome)
     }
@@ -104,11 +106,18 @@ class SafariRun(val startedAt: Long) {
             SafariMode.SPARKLING -> sparklingComplete(it.name, party, localOnly)
         } }
     val completion = SafariCompletionEvents()
-    /** Unique captures and sparkle checks share one HUD/announcement rule; PBs still use personal catches. */
+    /** Unique progress retains sparkle checks; missing rows and PBs use their own capture evidence. */
     fun uniqueComplete(name: String, party: PartySparklingState, localOnly: Boolean = false): Boolean {
         if (count(name) == 0) return false
         val critter = SafariRoster.named(name) ?: return false
         if (name !in uniqueChecks) return true
+        if (!localOnly && critter.biome != startingBiome && critter.biome in communalClears) {
+            return when (name) {
+                "Rockmite" -> !remainingMounds
+                "Snoozle" -> !remainingWalls
+                else -> true
+            }
+        }
         if (critter.biome !in visited) return !localOnly &&
             (critter.biome in communalClears || sparklingChecks.partyChecked(name))
         return when (name) {
