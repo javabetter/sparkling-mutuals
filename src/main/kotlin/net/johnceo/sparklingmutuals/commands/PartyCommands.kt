@@ -1,6 +1,7 @@
 package net.johnceo.sparklingmutuals.commands
 
 import net.johnceo.sparklingmutuals.LocalChat
+import net.johnceo.sparklingmutuals.api.ApiRetryWindow
 
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.johnceo.sparklingmutuals.config.ConfigManager
@@ -16,6 +17,8 @@ object PartyCommands {
     private data class Pending(val request: PartyRequest, val roster: List<String>, val election: ResponderElection, val chatCursor: Long,
         val mode: SafariMode = SafariFullClear.mode, var task: Future<*>? = null, var chunks: List<String>? = null)
     private val pending = mutableMapOf<String, Pending>()
+    private data class Failed(val state: Pending, val connection: Any?, val window: ApiRetryWindow)
+    private val failed = mutableMapOf<String, Failed>()
     private val recent = mutableMapOf<String, Long>()
     private val requests = mutableMapOf<String, PartyRequest>()
     private val history = PartyResponseHistory()
@@ -46,6 +49,7 @@ object PartyCommands {
         if (now - (recent[request.token] ?: 0) < 10_000) return
         recent[request.token] = now
         requests[request.token] = request
+        failed.remove(request.token)
         pending.remove(request.token)?.task?.cancel(false)
         val client = Minecraft.getInstance()
         val connection = client.connection ?: return
@@ -66,6 +70,20 @@ object PartyCommands {
         if (client.player == null || client.connection == null) { reset(); return }
         if (!ConfigManager.partyCommandsEnabled) { cancelPending(); return }
         val now = System.currentTimeMillis()
+        val retryIterator = failed.entries.iterator()
+        while (retryIterator.hasNext()) {
+            val (token, retry) = retryIterator.next()
+            val state = retry.state
+            if (retry.connection !== client.connection || state.mode != SafariFullClear.mode ||
+                !state.request.command.allowed() || !sameParty(client, state.roster) ||
+                history.hasReply(state.request.command, state.chatCursor, state.roster)) {
+                retryIterator.remove()
+            } else if (retry.window.due(now, ConfigManager.apiKey)) {
+                pending[token] = Pending(state.request, state.roster,
+                    ResponderElection(client.player!!.uuid.toString(), state.roster, now), state.chatCursor, state.mode)
+                retryIterator.remove()
+            }
+        }
         if (replies.isNotEmpty()) {
             val reply = replies.first()
             if (reply.mode != SafariFullClear.mode || !sameParty(client, reply.roster) ||
@@ -105,12 +123,14 @@ object PartyCommands {
                         if (pending[token] === state &&
                             client.connection === connection && ConfigManager.partyCommandsEnabled && state.mode == SafariFullClear.mode && state.request.command.allowed() &&
                             sameParty(client, state.roster)) {
-                            if (result.successful) {
+                            if (result.successful && (!state.request.command.requiresApiKey || ConfigManager.apiKey == key)) {
                                 state.chunks = PartyReplyChunks.split(result.partyMessage!!)
                                 state.election.lookupReady(System.currentTimeMillis())
                             } else {
                                 pending.remove(token)
-                                client.player?.sendSystemMessage(LocalChat.component(result.text))
+                                if (state.request.command.requiresApiKey) failed[token] = Failed(state, connection,
+                                    ApiRetryWindow().apply { failed(System.currentTimeMillis(), key) })
+                                if (!result.successful) client.player?.sendSystemMessage(LocalChat.component(result.text))
                             }
                         }
                     }
@@ -122,6 +142,7 @@ object PartyCommands {
     private fun cancelPending() {
         pending.values.forEach { it.task?.cancel(false) }
         pending.clear()
+        failed.clear()
         replies.clear()
     }
     fun reset() { cancelPending(); recent.clear(); requests.clear(); history.clear(); sentReplyAt = 0 }
