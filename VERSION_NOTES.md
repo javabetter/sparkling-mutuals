@@ -1,7 +1,11 @@
 ## v3 development — Unique completion
 
+- Verified empty Cavern mounds/walls complete zero-spawn Rockmite/Snoozle progress and remove their missing rows; sightings or remaining structures revoke the exception.
+- Party fd completes Macaw progress even without a capture. Capture totals and personal PB evidence remain independent.
+- Unique hides all critter entities of a captured species, including profitable species; unfinished nests/mounds/walls retain their helper highlights. The old Unique profitable setting is no longer shown.
+
 - Unique missing rows track first captures; progress retains required Forest/Cavern sparkle checks.
-- Party fd/cd claims stay trusted after entering a non-starting biome, unless visible Cavern mounds/walls contradict the corresponding check. Each species still requires a capture.
+- Party fd/cd claims stay trusted after entering a non-starting biome, unless visible Cavern mounds/walls contradict the corresponding check. Other species still require a capture.
 - Unique announces fd/cd only; Icy and Haunted remain capture-based without id/hd messages. PB requirements are unchanged.
 - Regression coverage includes nests, walls/mounds, extra bird food, remote confirmations and local announcements. Live in-game validation remains needed.
 
