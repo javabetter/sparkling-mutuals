@@ -39,7 +39,7 @@ class PartyRepliesTest {
         assertTrue(history.hasReply(tickets, 0, listOf("first", "second")), "Tickets keep one party-wide response")
     }
     @Test fun `missing key skips network and produces a local message only`() {
-        val reply = PartyLookupResult.fetch(tickets, "") { fail<String>("Must not start a lookup without a key") }
+        val reply = PartyLookupResult.fetch(tickets, "", cloud = false) { fail<String>("Must not start a lookup without a key") }
         assertFalse(reply.successful)
         assertNull(reply.partyMessage)
         assertTrue(reply.text.contains("No Hypixel API key"))

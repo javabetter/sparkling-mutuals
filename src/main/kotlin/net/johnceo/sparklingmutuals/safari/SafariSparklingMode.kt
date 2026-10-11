@@ -61,7 +61,7 @@ object SafariSparklingMode {
             invalidate(); state.reset(); key = currentKey; refresh = true; warning = null
         }
         if (!active) return
-        if (currentKey.isBlank()) {
+        if (currentKey.isBlank() && !ConfigManager.useCloudApi) {
             if (ConfigManager.sparklingMode) local(client, "No Hypixel API key. Use /apikey or settings.")
             return
         }

@@ -1,13 +1,14 @@
 package net.johnceo.sparklingmutuals.commands
 
 import net.johnceo.sparklingmutuals.api.ApiFailure
+import net.johnceo.sparklingmutuals.config.ConfigManager
 
 /** A failed lookup has a local message only, so another client can still provide the result. */
 data class PartyLookupResult(val text: String, val successful: Boolean) {
     val partyMessage get() = text.takeIf { successful }
     companion object {
-        fun fetch(command: PartyCommand, key: String, lookup: () -> String): PartyLookupResult {
-            if (command.requiresApiKey && key.isBlank()) return PartyLookupResult("[SM] No Hypixel API key. Use /apikey or settings.", false)
+        fun fetch(command: PartyCommand, key: String, cloud: Boolean = ConfigManager.useCloudApi, lookup: () -> String): PartyLookupResult {
+            if (command.requiresApiKey && key.isBlank() && !cloud) return PartyLookupResult("[SM] No Hypixel API key. Use /apikey or settings.", false)
             return try { PartyLookupResult(lookup(), true) }
             catch (failure: ApiFailure) { PartyLookupResult("[SM] ${failure.message.orEmpty()}", false) }
             catch (_: Exception) { PartyLookupResult("[SM] Lookup failed. Try again.", false) }

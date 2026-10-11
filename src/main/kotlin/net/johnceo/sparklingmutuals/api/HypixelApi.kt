@@ -12,8 +12,14 @@ import java.time.Duration
 object HypixelApi {
     private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
 
+    /** Lookups go through Shiny Hunter's shared API when no key of your own is set. */
+    val usingCloud get() = ConfigManager.apiKey.isBlank() && ConfigManager.useCloudApi
+
+    private fun profiles(uuid: String): JsonObject =
+        if (usingCloud) CloudApi.profiles(uuid) else get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid")
+
     fun getCurrentProfileUuid(uuid: String): String = data {
-        val profiles = get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid")
+        val profiles = profiles(uuid)
             .getAsJsonArray("profiles") ?: throw ApiFailure.dataUnavailable()
         profiles.firstOrNull { it.asJsonObject.get("selected")?.asBoolean == true }
             ?.asJsonObject?.get("profile_id")?.asString ?: throw ApiFailure.dataUnavailable()
@@ -49,9 +55,14 @@ object HypixelApi {
     }
 
     private fun getMember(playerUuid: String, profileUuid: String): JsonObject = data {
-        get("https://api.hypixel.net/v2/skyblock/profile?profile=$profileUuid")
+        val member = playerUuid.replace("-", "")
+        // The shared API serves only the profiles list (cached), so the member is read from there.
+        if (usingCloud) profiles(playerUuid).getAsJsonArray("profiles")
+            ?.map { it.asJsonObject }?.firstOrNull { it.get("profile_id")?.asString == profileUuid }
+            ?.getAsJsonObject("members")?.getAsJsonObject(member) ?: throw ApiFailure.dataUnavailable()
+        else get("https://api.hypixel.net/v2/skyblock/profile?profile=$profileUuid")
             .getAsJsonObject("profile")?.getAsJsonObject("members")
-            ?.getAsJsonObject(playerUuid.replace("-", "")) ?: throw ApiFailure.dataUnavailable()
+            ?.getAsJsonObject(member) ?: throw ApiFailure.dataUnavailable()
     }
 
     private fun get(url: String): JsonObject {

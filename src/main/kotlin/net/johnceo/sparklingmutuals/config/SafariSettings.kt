@@ -195,7 +195,9 @@ class SafariSettings : Config() {
 
     }
     class Api {
-        @JvmField @ConfigOption(name = "Hypixel API key", desc = "Edit the key used for profile lookups.")
+        @JvmField @ConfigOption(name = "Use Shiny Hunter cloud API", desc = "With no key of your own, look players up through Shiny Hunter's shared API. Your own key always takes priority.")
+        @ConfigEditorBoolean var cloud = ConfigManager.useCloudApi
+        @JvmField @ConfigOption(name = "Hypixel API key", desc = "Optional with the cloud API. Edit the key used for profile lookups.")
         @ConfigEditorButton(runnableId = 4, buttonText = "Edit API key") var edit = false
     }
 
@@ -248,7 +250,7 @@ class SafariSettings : Config() {
     }
     fun apply(notifyMode: Boolean = false) {
         if (warp.enabled != ConfigManager.warpAlertsEnabled) AlertManager.toggleAlert()
-        val changes = listOf(ConfigManager::highlightTeammates to safari.highlightTeammates, ConfigManager::showTeammateNames to safari.showTeammateNames, ConfigManager::profitableShardEsp to modes.unique.profitable, ConfigManager::sparklingProfitableShardEsp to modes.sparkling.profitable, ConfigManager::partyCommandsEnabled to party.enabled, ConfigManager::hideHauntedPaintings to safari.paintings,
+        val changes = listOf(ConfigManager::highlightTeammates to safari.highlightTeammates, ConfigManager::showTeammateNames to safari.showTeammateNames, ConfigManager::profitableShardEsp to modes.unique.profitable, ConfigManager::sparklingProfitableShardEsp to modes.sparkling.profitable, ConfigManager::partyCommandsEnabled to party.enabled, ConfigManager::useCloudApi to api.cloud, ConfigManager::hideHauntedPaintings to safari.paintings,
             ConfigManager::shinyDetection to safari.shiny, ConfigManager::hideyhoQuestClicks to safari.hideyho,
             ConfigManager::progressHud to tracking.progress,
             ConfigManager::missingPanel to tracking.missing,
