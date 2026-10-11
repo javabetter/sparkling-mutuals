@@ -3,6 +3,7 @@ package net.johnceo.sparklingmutuals.safari
 import net.johnceo.sparklingmutuals.LocalChat
 
 import net.johnceo.sparklingmutuals.api.ApiFailure
+import net.johnceo.sparklingmutuals.api.ApiRetryWindow
 import net.johnceo.sparklingmutuals.commands.SafariLookup
 import net.johnceo.sparklingmutuals.config.ConfigManager
 import net.johnceo.sparklingmutuals.party.PartyManager
@@ -44,13 +45,14 @@ object SafariSparklingMode {
     private var loadedRun: SafariRun? = null
     private var refresh = false
     private var warning: String? = null
+    private val retry = ApiRetryWindow()
     fun requestRefresh() { invalidate(); refresh = true }
     private fun local(client: Minecraft, message: String) {
         if (warning == message) return
         warning = message
         client.player?.sendSystemMessage(LocalChat.component("[SM] $message"))
     }
-    private fun invalidate() { generation++; task?.cancel(false); task = null; attemptedAt = 0 }
+    private fun invalidate() { generation++; task?.cancel(false); task = null; attemptedAt = 0; retry.reset() }
     fun tick(client: Minecraft) {
         if (client.player == null || client.connection == null) return
         val active = SafariAssist.location == SafariLocation.INSIDE || ConfigManager.sparklingMode
@@ -77,7 +79,9 @@ object SafariSparklingMode {
         }
         if (members != roster) { invalidate(); roster = members; state.select(members); warning = null }
         val run = SafariTracking.ledger.current
-        if (task != null || (!refresh && state.ready && loadedRun === run) || now - attemptedAt < 60_000) return
+        if (task != null || (!refresh && state.ready && loadedRun === run) ||
+            if (retry.pending) !retry.due(now, currentKey) else now - attemptedAt < 60_000) return
+        retry.reset()
         refresh = false
         attemptedAt = now
         val revision = generation
@@ -90,7 +94,10 @@ object SafariSparklingMode {
                 task = null
                 result.fold({ discoveries ->
                     if (state.accept(members, discoveries)) { loadedRun = run; warning = null }
-                }, { failure -> local(client, (failure as? ApiFailure)?.message ?: ApiFailure.unavailable().message!!) })
+                }, { failure ->
+                    retry.failed(System.currentTimeMillis(), currentKey); refresh = true
+                    local(client, (failure as? ApiFailure)?.message ?: ApiFailure.unavailable().message!!)
+                })
             }
         }
     }
