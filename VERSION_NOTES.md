@@ -1,7 +1,8 @@
 ## v3 development — Unique completion
 
-- Shared progress/missing rules retain Forest and Cavern sparkle checks after a first catch when party discoveries require them.
-- Unique clears announce fd/cd/id/hd once; unvisited Forest/Cavern special catches wait for party done confirmation. Icy and Haunted remain capture-based; PB requirements are unchanged.
+- Unique missing rows track first captures; progress retains required Forest/Cavern sparkle checks.
+- Party fd/cd claims stay trusted after entering a non-starting biome, unless visible Cavern mounds/walls contradict the corresponding check. Each species still requires a capture.
+- Unique announces fd/cd only; Icy and Haunted remain capture-based without id/hd messages. PB requirements are unchanged.
 - Regression coverage includes nests, walls/mounds, extra bird food, remote confirmations and local announcements. Live in-game validation remains needed.
 
 ## v3 development — teammate ESP
