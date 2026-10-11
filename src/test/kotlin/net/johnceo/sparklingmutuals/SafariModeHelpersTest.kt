@@ -17,7 +17,7 @@ class SafariModeHelpersTest {
         val state = party(emptySet())
         for (name in listOf("Honeybug", "Rockmite", "Snoozle")) {
             assertTrue(SafariHelperRules.needed(name, SafariMode.UNIQUE, caught(name), state))
-            assertTrue(SafariEspRules.neededForRun(name, false, caught(name), false, false, state))
+            assertFalse(SafariEspRules.neededForRun(name, false, caught(name), false, false, state))
         }
     }
     @Test fun `confirmed party discoveries stop unique checks after the first catch`() {

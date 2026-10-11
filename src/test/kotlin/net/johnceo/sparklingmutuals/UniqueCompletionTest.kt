@@ -70,7 +70,7 @@ class UniqueCompletionTest {
         run.partyFullClear("Party > Friend: fd")
         assertFalse(SafariPanels.missing(run, SafariBiome.FOREST, true, 0, party = state).rows.any { it.label == "Honeybug" })
         assertEquals(0, run.personalCount("Honeybug"))
-        assertFalse(complete(run, "Macaw", state))
+        assertTrue(complete(run, "Macaw", state))
     }
     @Test fun `inherited Unique Forest stays complete after visiting but starting Forest keeps local checks`() {
         val state = party("Honeybug", "Bluebird")
@@ -81,7 +81,7 @@ class UniqueCompletionTest {
         run.visitBiome(SafariBiome.FOREST)
         assertTrue(complete(run, "Honeybug", state))
         assertTrue(complete(run, "Bluebird", state))
-        assertFalse(complete(run, "Macaw", state))
+        assertTrue(complete(run, "Macaw", state))
         assertFalse(run.uniqueComplete("Honeybug", state, localOnly = true))
         val starting = SafariRun(0)
         starting.visitBiome(SafariBiome.FOREST)

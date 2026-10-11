@@ -20,7 +20,7 @@ class CommunalCompletionTest {
         run.visitBiome(SafariBiome.FOREST)
         run.updateCaptureEvidence(SafariBiome.FOREST, emptySet(), false)
         assertEquals(9, run.fullClearProgress(SafariBiome.FOREST.critters))
-        assertEquals(0, run.completed(SafariMode.UNIQUE, SafariBiome.FOREST.critters, party()))
+        assertEquals(1, run.completed(SafariMode.UNIQUE, SafariBiome.FOREST.critters, party()))
         assertNull(run.completion.announcement(run, SafariBiome.FOREST, SafariMode.FULL_CLEAR, party()))
         run.updateCaptureEvidence(SafariBiome.FOREST, setOf("Foxtrot"), false)
         assertTrue(run.fullClearProgress(SafariBiome.FOREST.critters) < 9)
