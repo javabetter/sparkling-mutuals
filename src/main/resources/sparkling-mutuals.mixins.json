@@ -3,7 +3,7 @@
 	"package": "net.johnceo.sparklingmutuals.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [],
-    "client": ["SafariPaintingMixin", "SafariShinyMixin", "SafariMoulThemeMixin", "SafariAttackKeyAccessor", "SafariAutoClickerMixin", "SafariChatMixin", "SafariCapsuleMixin", "SafariCandleMixin"],
+    "client": ["SafariPaintingMixin", "SafariShinyMixin", "SafariMoulThemeMixin", "SafariAttackKeyAccessor", "SafariAutoClickerMixin", "SafariChatMixin", "SafariCapsuleMixin", "SafariCandleMixin", "SafariManagerMixin"],
 	"injectors": {
 		"defaultRequire": 1
 	},
