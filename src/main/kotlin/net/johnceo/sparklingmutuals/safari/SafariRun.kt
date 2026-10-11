@@ -50,7 +50,8 @@ data class SafariCatch(val critter: SafariCritter, val personal: Boolean = true)
 class SafariRun(val startedAt: Long) {
     var hadFourIncense = false
         private set
-    fun inventoryEvidence(stacks: List<Pair<String, Int>>) {
+    fun inventoryEvidence(stacks: List<Pair<String, Int>>, now: Long = System.currentTimeMillis()) {
+        if (endedAt == null) birds.startingInventory(stacks, now - startedAt)
         if (stacks.filter { SafariRules.strip(it.first).trim() == "Soothing Incense" }.sumOf { it.second.coerceAtLeast(0) } >= 4)
             hadFourIncense = true
     }

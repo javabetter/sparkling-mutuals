@@ -31,7 +31,7 @@ object SafariBiomeClearTracking {
             nestsChecked = BeeNests.allChecked,
             moundsCleared = run.allMoundsBroken && SafariStructures.nearbyMounds == 0 && snapshot.critters.none { it.mound },
             wallsCleared = SafariStructures.walls.states.size == 5 && SafariStructures.walls.allBroken,
-            birdsSpawned = run.birds.allSpawned,
+            birdsSpawned = run.birds.sparklingSpawned,
             hauntedDropsRemaining = snapshot.floorDrops.count { SafariEspRules.biomeAt(it.x.toDouble(), it.z.toDouble()) == SafariBiome.HAUNTED })
         run.reconcileStructures(biome, SafariStructures.nearbyMounds > 0 || snapshot.critters.any { it.mound },
             SafariStructures.walls.states.any { it == WallState.INTACT })

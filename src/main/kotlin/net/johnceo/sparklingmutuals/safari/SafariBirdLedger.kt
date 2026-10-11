@@ -10,6 +10,18 @@ class SafariBirdLedger {
     private var macawPairs = 0
     private val spawned = mutableMapOf<String, Int>()
     private var announced = false
+    private val startingFoods = mutableMapOf<String, Int>()
+    val sparklingTarget get() = 9 + startingFoods.values.sum()
+    val sparklingSpawned get() = used >= sparklingTarget
+    /** Sample every tick during Head Start; subtract already reported Forest floor pickups. */
+    fun startingInventory(stacks: List<Pair<String, Int>>, elapsed: Long) {
+        if (elapsed !in 0L..3000L) return
+        val held = stacks.groupBy { SafariRules.strip(it.first).trim() }
+            .mapValues { (_, items) -> items.sumOf { it.second.coerceAtLeast(0) } }
+        foods.forEach { food ->
+            startingFoods[food] = maxOf(startingFoods[food] ?: 0, (held[food] ?: 0) - (forest[food] ?: 0))
+        }
+    }
     val foodsComplete get() = foods.all { (forest[it] ?: 0) >= 3 }
     val allSpawned get() = foodsComplete && used >= collected
     val collected get() = picked.values.sum()
