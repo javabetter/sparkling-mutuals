@@ -12,7 +12,8 @@ import net.minecraft.world.entity.Entity
 
 /**
  * Holds the Safari Manager shut for a while after someone calls a kick in party chat, so nobody starts the run
- * before the kick happens. Both ways in are guarded: the leader's click on the manager, and a member's ticket.
+ * before the kick happens, and while a `!dt` downtime hold stands (see SafariDowntime). Both ways in are guarded:
+ * the leader's click on the manager, and a member's ticket.
  * Only on the Safari island itself, never at the Critter Safari zone on Torrhus Canyon.
  * Sneaking goes anyway. The right-click is cancelled in SafariManagerMixin, since Fabric fires no client event for it.
  */
@@ -54,16 +55,24 @@ object SafariManagerGuard {
     /** Whether clicking this entity should be refused. Cheap for everything that isn't the manager. */
     fun shouldBlock(entity: Entity?): Boolean {
         val client = Minecraft.getInstance()
-        return entity != null && holding() && isManager(client, entity) && blocks(client)
+        return entity != null && (holding() || SafariDowntime.holding) && isManager(client, entity) && blocks(client)
     }
     private fun blocks(client: Minecraft): Boolean {
         val player = client.player ?: return false
-        if (!ConfigManager.holdManagerOnKick || !holding() || !SafariIsland.onIsland) return false
-        if (player.isShiftKeyDown) return false
+        val kick = ConfigManager.holdManagerOnKick && holding()
+        val downtime = SafariDowntime.holding
+        if (!(kick || downtime) || !SafariIsland.onIsland) return false
+        if (player.isShiftKeyDown) {
+            // Deliberate override; it also spends the downtime hold, which is a one-shot.
+            if (downtime) SafariDowntime.clear()
+            return false
+        }
         val now = System.currentTimeMillis()
         if (now - messagedAt > MESSAGE_COOLDOWN) {
             messagedAt = now
-            player.sendSystemMessage(LocalChat.component("[SM] Blocked: a kick was called (${(heldUntil - now + 999) / 1000}s left). Sneak to go anyway."))
+            val reason = if (downtime) "${SafariDowntime.holders()} asked for downtime"
+                else "a kick was called (${(heldUntil - now + 999) / 1000}s left)"
+            player.sendSystemMessage(LocalChat.component("[SM] Blocked: $reason. Sneak to go anyway."))
         }
         return true
     }
