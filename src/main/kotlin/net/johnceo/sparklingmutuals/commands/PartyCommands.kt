@@ -44,7 +44,7 @@ object PartyCommands {
         // Keep actual result bodies; a different result for the same command cannot cancel ours.
         val parsed = PartyCommand.fromChat(text) ?: return
         val request = parsed.copy(command = parsed.command.forResponder(Minecraft.getInstance().player?.name?.string ?: return))
-        if (!request.command.allowed()) return
+        if (!request.command.allowed() || !request.command.answerable()) return
         val chatCursor = history.cursor
         if (now - (recent[request.token] ?: 0) < 10_000) return
         recent[request.token] = now

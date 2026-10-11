@@ -20,15 +20,20 @@ object SafariPanels {
         return HudPanel(title, rows = listOf(bar(if (SafariFullClear.mode == SafariMode.SPARKLING) { if (party.ready) "Checked" else "Loading discoveries" } else "Collected", SafariRoster.all, HudRow.WHITE), HudRow()) +
             SafariBiome.entries.map { bar(it.label, it.critters, it.color) })
     }
-    fun missing(run: SafariRun?, biome: SafariBiome, unique: Boolean, nests: Int, mounds: Int = 0,
-        walls: WallSummary = WallSummary(emptyList()), party: PartySparklingState = SafariSparklingMode.state): HudPanel {
+    /** Critters of this biome the current mode still needs; the missing panel and `!m` both read it. */
+    fun missingCritters(run: SafariRun?, biome: SafariBiome, party: PartySparklingState = SafariSparklingMode.state): List<SafariCritter> {
         val sparkling = SafariFullClear.mode == SafariMode.SPARKLING
-        val missing = biome.critters.filter { if (sparkling) {
+        return biome.critters.filter { if (sparkling) {
                 if (run?.sparklingChecks?.wumpaPrerequisite(it.name, party) == true) run.count(it.name) == 0
                 else party.needs(it.name) && run?.sparklingComplete(it.name, party) != true
             }
             else if (SafariFullClear.mode == SafariMode.UNIQUE) (run?.count(it.name) ?: 0) == 0 && run?.uniqueUnavailable(it.name) != true
             else run?.missing(it, ConfigManager.fullClearMode) != false }
+    }
+    fun missing(run: SafariRun?, biome: SafariBiome, unique: Boolean, nests: Int, mounds: Int = 0,
+        walls: WallSummary = WallSummary(emptyList()), party: PartySparklingState = SafariSparklingMode.state): HudPanel {
+        val sparkling = SafariFullClear.mode == SafariMode.SPARKLING
+        val missing = missingCritters(run, biome, party)
         val rows = missing.map { critter ->
             HudRow(critter.name, if (!sparkling && ConfigManager.fullClearMode && critter.quota > 1) "${run?.count(critter.name) ?: 0}/${critter.quota}" else null,
                 critter.color, HudRow.GRAY)

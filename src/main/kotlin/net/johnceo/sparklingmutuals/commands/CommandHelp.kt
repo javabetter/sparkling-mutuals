@@ -15,6 +15,7 @@ object CommandHelp {
         PartyCommandKind.PB_CAVERN to "Cavern biome PB",
         PartyCommandKind.PB_ICY to "Icy biome PB",
         PartyCommandKind.PB_HAUNTED to "Haunted biome PB",
+        PartyCommandKind.MISSING_RUN to "What's left this run (add c/f/i/h for one biome)",
         PartyCommandKind.HELP to "Command list"
     )
     private val local = listOf(

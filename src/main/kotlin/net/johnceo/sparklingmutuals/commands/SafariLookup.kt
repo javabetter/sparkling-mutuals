@@ -35,6 +35,7 @@ object SafariLookup {
         PartyCommandKind.PB_ICY -> ConfigManager.personalBests.response(localName, "Icy")
         PartyCommandKind.PB_CAVERN -> ConfigManager.personalBests.response(localName, "Cavern")
         PartyCommandKind.HELP -> CommandHelp.partyReply()
+        PartyCommandKind.MISSING_RUN -> SafariMissingReply.current(command.biome)
         PartyCommandKind.MUTUALS -> {
             val discoveries = members.map { discoveries(it) }.reduceOrNull(Set<String>::intersect).orEmpty()
             "Mutual ${if (ConfigManager.timesaveOnly) "Timesave " else ""}Sparkling Critters: ${mutualResult(discoveries, ConfigManager.timesaveOnly)}"
