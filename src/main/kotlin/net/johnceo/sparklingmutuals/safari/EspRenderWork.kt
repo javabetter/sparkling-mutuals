@@ -1,5 +1,6 @@
 package net.johnceo.sparklingmutuals.safari
 
+import net.minecraft.world.phys.AABB
 import java.util.Base64
 
 /** Cache immutable profile values, never entity state; changed profiles are decoded immediately. */
@@ -50,5 +51,22 @@ internal object EspBoxLines {
                 bit = bit shl 1
             }
         }
+    }
+}
+
+/** Critter boxes are drawn a little larger than the hitbox, and never thinner than [MIN_SIZE], so small critters stay easy to spot and the outline sits clear of the model. */
+internal object EspBoxSize {
+    const val PADDING = .2
+    const val MIN_SIZE = .9
+    /** One axis of a padded box: grown by [PADDING] each side, then widened about its centre up to [MIN_SIZE]. */
+    fun axis(min: Double, max: Double): Pair<Double, Double> {
+        val grow = maxOf(0.0, MIN_SIZE - (max - min + 2 * PADDING)) / 2
+        return (min - PADDING - grow) to (max + PADDING + grow)
+    }
+    fun padded(box: AABB): AABB {
+        val (minX, maxX) = axis(box.minX, box.maxX)
+        val (minY, maxY) = axis(box.minY, box.maxY)
+        val (minZ, maxZ) = axis(box.minZ, box.maxZ)
+        return AABB(minX, minY, minZ, maxX, maxY, maxZ)
     }
 }
