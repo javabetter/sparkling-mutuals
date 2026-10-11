@@ -73,6 +73,8 @@ class CommunalCompletionTest {
         assertFalse(run.completion.alert(run, SafariMode.SPARKLING, PartySparklingState(), true))
         assertFalse(run.completion.alert(run, SafariMode.SPARKLING, party(), true))
         SafariRoster.all.forEach { run.record(SafariCatch(it, false)) }
+        assertFalse(run.completion.alert(run, SafariMode.UNIQUE, party(), true))
+        run.partyFullClear("Party > Friend: fd"); run.partyFullClear("Party > Friend: cd")
         assertFalse(run.completion.alert(run, SafariMode.UNIQUE, party(), false))
         assertTrue(run.completion.alert(run, SafariMode.UNIQUE, party(), true))
         assertFalse(run.completion.alert(run, SafariMode.UNIQUE, party(), true))

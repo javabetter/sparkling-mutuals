@@ -13,10 +13,14 @@ class SafariUniqueEspTest {
     @Test fun `unique ESP follows missing species across every biome and resets next run`() {
         ConfigManager.init(dir)
         val run = SafariRun(0)
+        val party = PartySparklingState().apply {
+            select(setOf("me")); accept(setOf("me"), mapOf("me" to SafariRoster.all.map { it.name }.toSet()))
+        }
         for (critter in SafariRoster.all) {
+            run.visitBiome(critter.biome)
             assertTrue(SafariEspRules.neededForRun(critter.name, false, run, false, false))
             run.record(SafariCatch(critter))
-            assertFalse(SafariPanels.missing(run, critter.biome, true, 0).rows.any { it.label == critter.name })
+            assertFalse(SafariPanels.missing(run, critter.biome, true, 0, party = party).rows.any { it.label == critter.name })
             assertFalse(SafariEspRules.neededForRun(critter.name, false, run, false, false))
             assertTrue(SafariEspRules.neededForRun(critter.name, false, run, true))
             assertTrue(SafariEspRules.neededForRun(critter.name, false, SafariRun(1000), false, false))
