@@ -54,6 +54,13 @@ object ConfigManager {
     var honeyHives = true
     var honeyHivesOnlyIncomplete = true
     var honeyHiveRefillLabels = true
+    var runHistory = true
+    var achievements = true
+    var achievementSound = true
+    var achievementsToParty = false
+    var autoImportLogs = true
+    /** Modification time of the newest archived log already imported. */
+    var logsImportedUpTo = 0L
     var hideCaptureChat = false
     var hideGroundCapsules = true
     var hideFlyingCapsules = true
@@ -64,7 +71,7 @@ object ConfigManager {
         ::hideyhoQuestClicks to true, ::hideHauntedPaintings to true, ::shinyDetection to true,
         ::progressHud to true, ::countUniqueOnly to false, ::missingPanel to true,
         ::highlightBeeNests to true, ::removeDarkness to true, ::sparklingAlert to true,
-        ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::holdManagerOnKick to true, ::downtimeCommand to true, ::honeyHives to true, ::honeyHivesOnlyIncomplete to true, ::honeyHiveRefillLabels to true,
+        ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::holdManagerOnKick to true, ::downtimeCommand to true, ::honeyHives to true, ::honeyHivesOnlyIncomplete to true, ::honeyHiveRefillLabels to true, ::runHistory to true, ::achievements to true, ::achievementSound to true, ::achievementsToParty to false, ::autoImportLogs to true,
         ::hideCaptureChat to false, ::hideGroundCapsules to true, ::hideFlyingCapsules to true,
         ::highlightSnooperWalls to true, ::showBeeNests to true, ::showMoundCount to true,
         ::showSnooperWalls to true, ::showMoundStats to false,
@@ -85,6 +92,7 @@ object ConfigManager {
         sparklingSoundVolume = properties.getProperty("sparklingSoundVolume")?.toIntOrNull()?.coerceIn(0, 100) ?: 100
         flags.forEach { (property, default) -> property.set(properties.getProperty(property.name)?.toBooleanStrictOrNull() ?: default) }
         warpDelaySeconds = properties.getProperty("warpDelaySeconds", "25").toIntOrNull()?.coerceIn(1, 86400) ?: 25
+        logsImportedUpTo = properties.getProperty("logsImportedUpTo")?.toLongOrNull() ?: 0L
         showWhere = properties.getProperty("showWhere")?.toIntOrNull()?.takeIf { it in 0..2 } ?: 1
         capsuleHideDistance = validCapsuleDistance(properties.getProperty("capsuleHideDistance")?.toFloatOrNull())
         SafariHud.load(properties)
@@ -106,6 +114,7 @@ object ConfigManager {
             setProperty("sparklingSoundVolume", sparklingSoundVolume.coerceIn(0, 100).toString())
             flags.forEach { (property, _) -> setProperty(property.name, property.get().toString()) }
             setProperty("warpDelaySeconds", warpDelaySeconds.toString())
+            setProperty("logsImportedUpTo", logsImportedUpTo.toString())
             setProperty("showWhere", showWhere.coerceIn(0, 2).toString())
             setProperty("capsuleHideDistance", validCapsuleDistance(capsuleHideDistance).toString())
             SafariHud.save(this)

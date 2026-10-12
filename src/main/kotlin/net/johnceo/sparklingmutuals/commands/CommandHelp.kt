@@ -23,6 +23,8 @@ object CommandHelp {
         "/sm gui" to "Move and resize HUDs",
         "/captures" to "Current or last run captures",
         "/sparkling [IGN|party|IGNs]" to "Sparkling card, or shared sparklings",
+        "/sm history" to "Runs, bests, sparklings, achievements, stats",
+        "/sm history import" to "Rebuild past runs from your logs",
         "/sm debug" to "Save entity diagnostics",
         "/fc" to "Full clear mode",
         "/unique" to "Unique run mode",
