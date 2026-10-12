@@ -30,10 +30,13 @@ object CommandHelp {
         "/alertdelay <seconds>" to "Warp reminder delay",
         "/apikey <key>" to "Set API key"
     )
+    /** Party chat words other mods' users can say that this mod reacts to, without a lookup reply. */
+    private val partyWords = listOf("!dt [reason]" to "Downtime after this run; say r when ready")
     private fun available(mode: SafariMode) = party.map { (kind, description) -> PartyCommand(kind, if (kind in listOf(PartyCommandKind.MISSING, PartyCommandKind.TICKETS)) "<IGN>" else "") to description }
         .filter { it.first.allowed(mode) }
     fun localLines(mode: SafariMode = SafariFullClear.mode) = listOf("§6Sparkling Mutuals — Commands", "§eParty chat commands") +
         available(mode).map { (command, description) -> "§6${command.text} §7— $description" } +
+        partyWords.map { (command, description) -> "§6$command §7— $description" } +
         listOf("§eLocal commands") + local.map { (command, description) -> "§6$command §7— $description" } +
         listOf("§7<IGN> = Minecraft username. Party commands use /pc.")
     fun partyReply(mode: SafariMode = SafariFullClear.mode) = "[SM] Commands: Party: " +

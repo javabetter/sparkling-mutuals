@@ -74,6 +74,8 @@ class SafariSettings : Config() {
     class Party {
         @JvmField @ConfigOption(name = "Respond to party commands", desc = "Reply to party commands; each mod user shares their PB.")
         @ConfigEditorBoolean var enabled = ConfigManager.partyCommandsEnabled
+        @JvmField @ConfigOption(name = "!dt downtime", desc = "After a run, hold the Safari Manager for whoever said !dt until they say r. Sneak-click skips.")
+        @ConfigEditorBoolean var downtime = ConfigManager.downtimeCommand
 
     }
     class Miria {
@@ -250,7 +252,7 @@ class SafariSettings : Config() {
     }
     fun apply(notifyMode: Boolean = false) {
         if (warp.enabled != ConfigManager.warpAlertsEnabled) AlertManager.toggleAlert()
-        val changes = listOf(ConfigManager::highlightTeammates to safari.highlightTeammates, ConfigManager::showTeammateNames to safari.showTeammateNames, ConfigManager::profitableShardEsp to modes.unique.profitable, ConfigManager::sparklingProfitableShardEsp to modes.sparkling.profitable, ConfigManager::partyCommandsEnabled to party.enabled, ConfigManager::hideHauntedPaintings to safari.paintings,
+        val changes = listOf(ConfigManager::highlightTeammates to safari.highlightTeammates, ConfigManager::showTeammateNames to safari.showTeammateNames, ConfigManager::profitableShardEsp to modes.unique.profitable, ConfigManager::sparklingProfitableShardEsp to modes.sparkling.profitable, ConfigManager::partyCommandsEnabled to party.enabled, ConfigManager::downtimeCommand to party.downtime, ConfigManager::hideHauntedPaintings to safari.paintings,
             ConfigManager::shinyDetection to safari.shiny, ConfigManager::hideyhoQuestClicks to safari.hideyho,
             ConfigManager::progressHud to tracking.progress,
             ConfigManager::missingPanel to tracking.missing,

@@ -49,6 +49,7 @@ object ConfigManager {
     var autoClicker = true
     var candleHitbox = true
     var holdManagerOnKick = true
+    var downtimeCommand = true
     var hideCaptureChat = false
     var hideGroundCapsules = true
     var hideFlyingCapsules = true
@@ -59,7 +60,7 @@ object ConfigManager {
         ::hideyhoQuestClicks to true, ::hideHauntedPaintings to true, ::shinyDetection to true,
         ::progressHud to true, ::countUniqueOnly to false, ::missingPanel to true,
         ::highlightBeeNests to true, ::removeDarkness to true, ::sparklingAlert to true,
-        ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::holdManagerOnKick to true,
+        ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::holdManagerOnKick to true, ::downtimeCommand to true,
         ::hideCaptureChat to false, ::hideGroundCapsules to true, ::hideFlyingCapsules to true,
         ::highlightSnooperWalls to true, ::showBeeNests to true, ::showMoundCount to true,
         ::showSnooperWalls to true, ::showMoundStats to false,

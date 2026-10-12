@@ -46,6 +46,7 @@ object SparklingMutuals : ModInitializer {
         TeammateEsp.register()
         SafariIsland.register()
         SafariManagerGuard.register()
+        SafariDowntime.register()
         ClientTickEvents.START_CLIENT_TICK.register(AutoClicker::tick)
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
@@ -61,6 +62,7 @@ object SparklingMutuals : ModInitializer {
             SafariBiomeClearTracking.tick(client)
             SafariInventoryAlerts.tick(client)
             HideyhoQuest.onClientTick(client)
+            SafariDowntime.onClientTick(client)
         }
 
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
@@ -74,6 +76,7 @@ object SparklingMutuals : ModInitializer {
             SafariEsp.reset()
             AutoClicker.reset()
             SafariManagerGuard.reset()
+            SafariDowntime.reset()
             SafariIsland.reset()
         }
 
