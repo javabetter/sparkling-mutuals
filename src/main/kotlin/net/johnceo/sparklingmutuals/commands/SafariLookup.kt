@@ -1,12 +1,15 @@
 package net.johnceo.sparklingmutuals.commands
 
 import net.johnceo.sparklingmutuals.api.HypixelApi
+import net.johnceo.sparklingmutuals.api.ApiProvider
+import net.johnceo.sparklingmutuals.api.ApiFailure
+import net.johnceo.sparklingmutuals.api.ApiFailureKind
 import net.johnceo.sparklingmutuals.config.ConfigManager
 import net.johnceo.sparklingmutuals.safari.SafariRoster
 
 object SafariLookup {
     private data class Cached(val discoveries: Set<String>, val timestamp: Long)
-    private data class CacheKey(val key: String, val uuid: String)
+    private data class CacheKey(val provider: ApiProvider, val uuid: String)
     private val cache = mutableMapOf<CacheKey, Cached>()
     private val timesaves = linkedMapOf("ROCKMITE" to "Rockmite", "SNOOZLE" to "Snoozle",
         "GEMZIE" to "Gemzie", "HONEYBUG" to "Honeybug", "GAZER" to "Gazer",
@@ -14,14 +17,17 @@ object SafariLookup {
     private val birds = setOf("BLUEBIRD", "PARAKEET", "MACAW")
 
     @Synchronized fun clearCache() = cache.clear()
-    /** Both party commands and mode refreshes share a key-scoped, serialized 60-second cache. */
-    @Synchronized fun discoveries(uuid: String, key: String = ConfigManager.apiKey): Set<String> {
-        check(key == ConfigManager.apiKey) { "API key changed during lookup" }
-        val id = CacheKey(key, uuid)
+    /** Both party commands and mode refreshes share a provider-scoped, serialized 60-second cache. */
+    @Synchronized fun discoveries(uuid: String, key: String = ConfigManager.apiKey): Set<String> =
+        discoveries(uuid, ApiProvider.capture(key))
+    @Synchronized fun discoveries(uuid: String, provider: ApiProvider): Set<String> {
+        check(provider == HypixelApi.provider) { "API provider changed during lookup" }
+        if (!provider.enabled) throw ApiFailure(ApiFailureKind.MISSING_KEY, "No Hypixel API key. Use /apikey or settings.")
+        val id = CacheKey(provider, uuid)
         val now = System.currentTimeMillis()
         cache[id]?.takeIf { now - it.timestamp < 60_000 }?.let { return it.discoveries }
         val result = HypixelApi.getSparklingCritters(uuid, HypixelApi.getCurrentProfileUuid(uuid))
-        check(key == ConfigManager.apiKey) { "API key changed during lookup" }
+        check(provider == HypixelApi.provider) { "API provider changed during lookup" }
         cache[id] = Cached(result, System.currentTimeMillis())
         cache.entries.removeIf { System.currentTimeMillis() - it.value.timestamp > 60_000 }
         return result

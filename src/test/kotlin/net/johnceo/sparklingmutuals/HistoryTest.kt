@@ -1,11 +1,103 @@
 package net.johnceo.sparklingmutuals
 
 import net.johnceo.sparklingmutuals.history.*
+import net.johnceo.sparklingmutuals.safari.SafariRun
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
+import java.time.ZoneId
+import java.nio.file.Files
+import java.nio.file.Path
+import org.junit.jupiter.api.io.TempDir
 
 class HistoryTest {
+    @Test fun `entry and first capture before a tick are saved in the new run`() {
+        val session = LiveHistorySession()
+        val run = SafariRun(1_000_000)
+        session.onTicket(null)
+        session.chat(run, "Me entered Critter Safari!\nCAPTURE! You caught a Cavernfish and gained 2x Cavernfish Shard!", "Me") { fail<Unit>("there is no old run to finish") }
+        assertEquals(1, session.tally.caught)
+        assertEquals(mapOf("Cavernfish" to 2), session.tally.shards)
+        assertEquals(1, session.tickets)
+        assertSame(run, session.active)
+    }
+    @Test fun `a new run's first capture finishes the old tally before adding the new capture`() {
+        val session = LiveHistorySession()
+        val old = SafariRun(1_000_000)
+        val next = SafariRun(2_000_000)
+        session.onTicket(null)
+        session.sync(old) { fail<Unit>("there is no old run to finish") }
+        session.chat(old, "CAPTURE! You caught a Cavernfish and gained a Cavernfish Shard!", "Me") { fail<Unit>("the run has not changed") }
+        session.splits["Cavern"] = 60_000
+        session.onTicket(next)
+        var finished = 0
+        session.chat(next, "CAPTURE! You caught a Bloodbat and gained a Bloodbat Shard!", "Me") { ended ->
+            finished++
+            assertSame(old, ended)
+            assertEquals(1, session.tally.caught)
+            assertEquals(mapOf("Cavernfish" to 1), session.tally.shards)
+            assertEquals(mapOf("Cavern" to 60_000L), session.splits)
+            assertEquals(1, session.tickets)
+        }
+        session.sync(next) { fail<Unit>("the old run must finish only once") }
+        assertEquals(1, finished)
+        assertEquals(1, session.tally.caught)
+        assertEquals(mapOf("Bloodbat" to 1), session.tally.shards)
+        assertTrue(session.splits.isEmpty())
+        assertEquals(1, session.tickets)
+    }
+    @Test fun `a ticket callback after chat synchronization belongs to the current run`() {
+        val session = LiveHistorySession()
+        val run = SafariRun(1_000_000)
+        session.sync(run) { fail<Unit>("there is no old run to finish") }
+        session.onTicket(run)
+        assertEquals(1, session.tickets)
+        session.sync(null) { }
+        session.sync(SafariRun(2_000_000)) { }
+        assertEquals(0, session.tickets, "the ticket must not leak into the following run")
+    }
+    @Test fun `a ticket handed in between runs survives the departure synchronization`() {
+        val session = LiveHistorySession()
+        session.sync(SafariRun(1_000_000)) { }
+        session.onTicket(null)
+        session.sync(null) { assertEquals(0, session.tickets, "the new ticket is not part of the old run") }
+        session.sync(SafariRun(2_000_000)) { }
+        assertEquals(1, session.tickets)
+    }
+    @Test fun `finishing a live run replaces only its imported duplicate`() {
+        val previous = RunRecord(number = 1, start = 1_000_000, length = 50_000, imported = true)
+        val duplicate = RunRecord(number = 2, start = 1_100_000, length = 50_000, imported = true)
+        val runs = mutableListOf(duplicate, previous)
+        val live = RunRecord(start = 1_100_050, length = 50_000)
+        assertSame(duplicate, HistoryMerge.removeLiveDuplicate(runs, live))
+        assertEquals(listOf(previous), runs)
+    }
+    @Test fun `finishing a new short run keeps the preceding imported run`() {
+        val previous = RunRecord(number = 1, start = 1_000_000, length = 100_000, imported = true)
+        val runs = mutableListOf(previous)
+        assertNull(HistoryMerge.removeLiveDuplicate(runs, RunRecord(start = 1_100_050, length = 30_000)))
+        assertEquals(listOf(previous), runs)
+    }
+    @Test fun `non-chat lines advance the day before the first Safari chat`() {
+        val log = listOf(
+            "[23:50:00] [Render thread/INFO]: Starting session",
+            "[00:05:00] [Render thread/INFO]: Reloading resources",
+            "[00:10:00] [Render thread/INFO]: [CHAT] [NPC] Safari Manager: Looks good to me. Have fun out there!",
+            "[00:10:30] [Render thread/INFO]: [CHAT] CAPTURE! You caught a Cavernfish and gained a Cavernfish Shard!",
+            "[00:11:00] [Render thread/INFO]: [CHAT] Sending to server mini1A...").joinToString("\n")
+        val parser = LogImporter.Parser("Me")
+        parser.read(log.reader().buffered(), LocalDate.of(2026, 10, 10))
+        assertEquals(LocalDate.of(2026, 10, 11).atTime(0, 10).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), parser.runs.single().start)
+        assertEquals(60_000L, parser.runs.single().length)
+    }
+    @Test fun `a copied latest log preserves its final run`(@TempDir folder: Path) {
+        Files.writeString(folder.resolve("latest.log"), listOf(
+            "[13:00:00] [Render thread/INFO]: [CHAT] [NPC] Safari Manager: Looks good to me. Have fun out there!",
+            "[13:00:30] [Render thread/INFO]: [CHAT] CAPTURE! You caught a Cavernfish and gained a Cavernfish Shard!").joinToString("\n"))
+        val result = LogImporter.read(folder, "Me", includeLatest = true, newerThan = -1).join()
+        assertEquals(1, result.runs.size)
+        assertEquals(30_000L, result.runs.single().length)
+    }
     @Test fun `a run's chat gives shards, feathers, macaws and sparklings`() {
         val tally = RunTally()
         listOf("CAPTURE! You caught a Cavernfish and gained 2x Cavernfish Shard!",

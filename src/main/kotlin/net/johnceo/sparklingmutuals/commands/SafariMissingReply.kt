@@ -32,8 +32,11 @@ object SafariMissingReply {
     /**
      * An `!m` answer belongs to the run it was asked in. Leaving the Safari, or the ledger moving on to
      * another run while the election or a queued reply waits, drops it instead of answering for the wrong run.
+     * The world is checked too, because command publication can run before the ledger's next world update.
      * Every other command is not bound to a run.
      */
-    fun holds(command: PartyCommand, asked: SafariRun?, current: SafariRun?, inSafari: Boolean) =
-        command.kind != PartyCommandKind.MISSING_RUN || (inSafari && asked != null && asked === current)
+    fun holds(command: PartyCommand, asked: SafariRun?, current: SafariRun?, inSafari: Boolean,
+        askedWorld: Any? = null, currentWorld: Any? = askedWorld) =
+        command.kind != PartyCommandKind.MISSING_RUN ||
+            (inSafari && asked != null && asked === current && askedWorld === currentWorld)
 }

@@ -2,6 +2,8 @@ package net.johnceo.sparklingmutuals.commands
 
 import net.johnceo.sparklingmutuals.LocalChat
 import net.johnceo.sparklingmutuals.api.ApiRetryWindow
+import net.johnceo.sparklingmutuals.api.ApiProvider
+import net.johnceo.sparklingmutuals.api.HypixelApi
 
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.johnceo.sparklingmutuals.config.ConfigManager
@@ -18,7 +20,9 @@ import java.util.concurrent.Future
 
 object PartyCommands {
     private data class Pending(val request: PartyRequest, val roster: List<String>, val election: ResponderElection, val chatCursor: Long,
-        val mode: SafariMode = SafariFullClear.mode, val run: SafariRun? = null, var task: Future<*>? = null, var chunks: List<String>? = null)
+        val mode: SafariMode = SafariFullClear.mode, val run: SafariRun? = null, val world: Any? = null,
+        val provider: ApiProvider = HypixelApi.provider,
+        var task: Future<*>? = null, var chunks: List<String>? = null)
     private val pending = mutableMapOf<String, Pending>()
     private data class Failed(val state: Pending, val connection: Any?, val window: ApiRetryWindow)
     private val failed = mutableMapOf<String, Failed>()
@@ -26,7 +30,7 @@ object PartyCommands {
     private val requests = mutableMapOf<String, PartyRequest>()
     private val history = PartyResponseHistory()
     private data class QueuedReply(val token: String, val body: String, val roster: List<String>, val mode: SafariMode,
-        val cursor: Long, val part: Int, val command: PartyCommand, val run: SafariRun?)
+        val cursor: Long, val part: Int, val command: PartyCommand, val run: SafariRun?, val world: Any?, val provider: ApiProvider)
     private val replies = ArrayDeque<QueuedReply>()
     private var sentReplyAt = 0L
     private val executor = Executors.newSingleThreadExecutor { Thread(it, "Sparkling Mutuals lookups").apply { isDaemon = true } }
@@ -50,7 +54,9 @@ object PartyCommands {
         if (!request.command.allowed() || !request.command.answerable()) return
         // Bind run-scoped commands to the run they were asked in; every later stage rechecks it.
         val run = SafariTracking.ledger.current
-        if (!stillFor(request.command, run)) return
+        val world = Minecraft.getInstance().level
+        if (!stillFor(request.command, run, world)) return
+        val provider = HypixelApi.provider
         val chatCursor = history.cursor
         if (now - (recent[request.token] ?: 0) < 10_000) return
         recent[request.token] = now
@@ -62,15 +68,20 @@ object PartyCommands {
         val mode = SafariFullClear.mode
         PartyManager.withPartyInfo {
             if (client.connection !== connection || !ConfigManager.partyCommandsEnabled ||
-                requests[request.token] !== request || mode != SafariFullClear.mode || !stillFor(request.command, run)) return@withPartyInfo
+                requests[request.token] !== request || mode != SafariFullClear.mode || !stillFor(request.command, run, world) ||
+                !stillUsing(request.command, provider)) return@withPartyInfo
             val local = client.player?.uuid?.toString() ?: return@withPartyInfo
             val roster = PartyManager.withLocal(local)?.toList() ?: return@withPartyInfo
-            pending[request.token] = Pending(request, roster, ResponderElection(local, roster, now), chatCursor, mode, run)
+            pending[request.token] = Pending(request, roster, ResponderElection(local, roster, now), chatCursor, mode, run, world, provider)
         }
     }
 
-    private fun stillFor(command: PartyCommand, run: SafariRun?) =
-        SafariMissingReply.holds(command, run, SafariTracking.ledger.current, SafariAssist.inSafari)
+    private fun stillFor(command: PartyCommand, run: SafariRun?, world: Any?) =
+        SafariMissingReply.holds(command, run, SafariTracking.ledger.current, SafariAssist.inSafari,
+            world, Minecraft.getInstance().level)
+
+    private fun stillUsing(command: PartyCommand, provider: ApiProvider) =
+        !command.requiresApiKey || provider == HypixelApi.provider
 
     private fun sameParty(client: Minecraft, roster: List<String>) =
         client.player?.uuid?.toString()?.let(PartyManager::withLocal) == roster.toSet()
@@ -84,18 +95,19 @@ object PartyCommands {
             val (token, retry) = retryIterator.next()
             val state = retry.state
             if (retry.connection !== client.connection || state.mode != SafariFullClear.mode ||
-                !state.request.command.allowed() || !stillFor(state.request.command, state.run) || !sameParty(client, state.roster) ||
+                !state.request.command.allowed() || !stillFor(state.request.command, state.run, state.world) || !sameParty(client, state.roster) ||
                 history.hasReply(state.request.command, state.chatCursor, state.roster)) {
                 retryIterator.remove()
-            } else if (retry.window.due(now, ConfigManager.apiKey)) {
+            } else if (retry.window.due(now, HypixelApi.provider)) {
                 pending[token] = Pending(state.request, state.roster,
-                    ResponderElection(client.player!!.uuid.toString(), state.roster, now), state.chatCursor, state.mode, state.run)
+                    ResponderElection(client.player!!.uuid.toString(), state.roster, now), state.chatCursor, state.mode, state.run, state.world, HypixelApi.provider)
                 retryIterator.remove()
             }
         }
         if (replies.isNotEmpty()) {
             val reply = replies.first()
-            if (reply.mode != SafariFullClear.mode || !stillFor(reply.command, reply.run) || !sameParty(client, reply.roster) ||
+            if (reply.mode != SafariFullClear.mode || !stillFor(reply.command, reply.run, reply.world) || !stillUsing(reply.command, reply.provider) ||
+                !sameParty(client, reply.roster) ||
                 history.containsResult(reply.body, reply.cursor, reply.roster)) replies.removeFirst()
             else if (reply.part == 0 || now - sentReplyAt >= 1500) {
                 replies.removeFirst()
@@ -108,7 +120,8 @@ object PartyCommands {
         val iterator = pending.entries.iterator()
         while (iterator.hasNext()) {
             val (token, state) = iterator.next()
-            if (state.mode != SafariFullClear.mode || !state.request.command.allowed() || !stillFor(state.request.command, state.run) ||
+            if (state.mode != SafariFullClear.mode || !state.request.command.allowed() || !stillFor(state.request.command, state.run, state.world) ||
+                !stillUsing(state.request.command, state.provider) ||
                 state.election.expired(now) || !sameParty(client, state.roster)) {
                 state.task?.cancel(false)
                 iterator.remove(); continue
@@ -117,12 +130,12 @@ object PartyCommands {
             if (chunks != null && state.election.canPublish(now)) {
                 chunks.forEachIndexed { part, body ->
                     if (!history.containsResult(body, state.chatCursor, state.roster))
-                        replies.addLast(QueuedReply(token, body, state.roster, state.mode, state.chatCursor, part, state.request.command, state.run))
+                        replies.addLast(QueuedReply(token, body, state.roster, state.mode, state.chatCursor, part, state.request.command, state.run, state.world, state.provider))
                 }
                 iterator.remove()
             } else if (state.election.shouldStartLookup(now)) {
                 val connection = client.connection
-                val key = ConfigManager.apiKey
+                val key = state.provider.key
                 val localName = client.player!!.name.string
                 // `!m` reads the bound run's ledger, so it is answered here on the client thread, not by the lookup thread.
                 val runReply = if (state.request.command.kind == PartyCommandKind.MISSING_RUN)
@@ -135,14 +148,14 @@ object PartyCommands {
                     client.execute {
                         if (pending[token] === state &&
                             client.connection === connection && ConfigManager.partyCommandsEnabled && state.mode == SafariFullClear.mode && state.request.command.allowed() &&
-                            stillFor(state.request.command, state.run) && sameParty(client, state.roster)) {
-                            if (result.successful && (!state.request.command.requiresApiKey || ConfigManager.apiKey == key)) {
+                            stillFor(state.request.command, state.run, state.world) && stillUsing(state.request.command, state.provider) && sameParty(client, state.roster)) {
+                            if (result.successful) {
                                 state.chunks = PartyReplyChunks.split(result.partyMessage!!)
                                 state.election.lookupReady(System.currentTimeMillis())
                             } else {
                                 pending.remove(token)
                                 if (state.request.command.requiresApiKey) failed[token] = Failed(state, connection,
-                                    ApiRetryWindow().apply { failed(System.currentTimeMillis(), key) })
+                                    ApiRetryWindow().apply { failed(System.currentTimeMillis(), state.provider) })
                                 if (!result.successful) client.player?.sendSystemMessage(LocalChat.component(result.text))
                             }
                         }

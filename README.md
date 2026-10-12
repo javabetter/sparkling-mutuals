@@ -13,13 +13,14 @@ A Fabric mod for Hypixel SkyBlock Safari, sparkling discoveries, and Miria conte
 - **Biome captures HUD:** show species counts and Rockmite mound statistics.
 - **Capture review (`/captures`):** view the current or last run's captures.
 - **Biome personal bests:** save separate Full Clear and Unique clear times.
+- **Party Unique PBs:** save party biome clear times alongside personal Unique records.
 - **Boss personal bests:** save solo/duo Doomspiral and Wumpa times, plus observed party records.
 - **Boss capture feedback:** show elapsed capture time and the difference from the previous PB.
 - **Biome announcements:** send `fd`, `cd`, `id`, or `hd` when eligible biomes are complete.
 
 ## Highlights and helpers
 
-- **Critter ESP:** draw colored boxes around Safari critters across all four biomes.
+- **Critter ESP:** draw colored, slightly enlarged boxes around critters across all four biomes.
 - **Floor drop ESP:** highlight needed Safari supplies until their requirements are met.
 - **Bee nest waypoints:** locate nests that still need punching.
 - **Rockmite highlights:** distinguish mounds from spawned silverfish.
@@ -52,12 +53,25 @@ A Fabric mod for Hypixel SkyBlock Safari, sparkling discoveries, and Miria conte
 - **Warp reminders (`/alert`, `/alertdelay <seconds>`):** remind you to warp party members before entry closes.
 - **Miria contest HUD:** track contest time, score, and tier.
 - **Miria warnings:** warn below Uncommon at the selected 5-, 3-, and 1-minute marks.
+- **Honeyhive beacons:** mark available Torrhus Canyon hives with personal refill countdowns.
+
+## History and achievements
+
+- **Run history (`/sm history`):** browse saved captures, loot shares, splits, bests and run statistics.
+- **Sparkling history:** record personal and party finds with ticket counts and dry streaks.
+- **Log import (`/sm history import`):** rebuild past runs from Minecraft logs.
+- **Achievements (`/sm achievements`):** track Safari milestones, collection progress and playtime.
+- **Profit history:** estimate shard and feather values from Bazaar prices, with a Profit tab and coin milestones.
 
 ## Party commands and settings
 
 - **`!mutual` / `!mutuals`:** list shared sparkling discoveries that save Safari time.
 - **`!missing <IGN>`:** list a player's missing sparkling discoveries that save time.
 - **`!tickets <IGN>`:** show a player's Safari ticket counts.
+- **`!m [biome]`:** report what remains in the current Safari run.
+- **`!dt [reason]` / `r`:** request downtime after the run and release your hold when ready.
+- **Safari Manager kick hold:** pause manager interaction and ticket use after a kick request; sneak to override.
+- **`/sparkling [IGN|party|IGNs]`:** show Safari player cards or compare sparkling collections.
 - **`!pb <biome>`:** share Forest, Cavern, Icy, or Haunted PBs for the active mode.
 - **`!pb doom` / `!pb wumpa`:** share solo boss PBs; add `duo` or an IGN for other records.
 - **`!commands`:** show the party commands available in the active mode.
@@ -66,7 +80,7 @@ A Fabric mod for Hypixel SkyBlock Safari, sparkling discoveries, and Miria conte
 - **Appearance:** customize critter/waypoint colors, panel borders, backgrounds, and transparency.
 - **ESP visibility:** independently restrict each biome and floor drops to your current biome.
 - **Alert customization:** choose sounds, volumes, and run completion text.
-- **API key (`/apikey <key>`):** set the Hypixel key used for profile lookups.
+- **Player lookups:** use your Hypixel key (`/apikey <key>`) or the optional Shiny Hunter shared API.
 - **Diagnostics (`/sm debug`):** save local entity tracking details to `latest.log`.
 
 ## Installation
@@ -74,11 +88,12 @@ A Fabric mod for Hypixel SkyBlock Safari, sparkling discoveries, and Miria conte
 - Requires Minecraft **26.1.2**, Java **25**, Fabric Loader **0.19.5+**, Fabric API, and Fabric Language Kotlin.
 - Download the JAR from [Releases](https://github.com/johnceoskyblock/sparkling-mutuals/releases) and place it in your `mods` folder.
 - Development builds: download the Artifacts ZIP from a successful [Actions run](https://github.com/johnceoskyblock/sparkling-mutuals/actions) and extract the JAR without `-sources` in its name.
-- Profile lookups and Sparkling mode require a [Hypixel API key](https://developer.hypixel.net).
+- Profile lookups use a [Hypixel API key](https://developer.hypixel.net) or the optional Shiny Hunter shared API.
 - Release notes are in the [release descriptions](https://github.com/johnceoskyblock/sparkling-mutuals/releases).
 
 ## Credits
 
+- JavaBetter contributed player cards, cloud lookups, party helpers, honeyhives, history, achievements and profit tracking; GamingLegend123 contributed the Shiny Hunter icon.
 - Adapted work: [CritterMod v0.9.0](https://github.com/MrCloudy2/critterMod/tree/v0.9.0), [ShinyHunter](https://github.com/javabetter/ShinyHunter), [Nebulune](https://github.com/Gaeritag/Nebulune), and [SkyHanni 9.1.0](https://github.com/hannibal002/SkyHanni/tree/9.1.0).
 - Settings: [MoulConfig](https://github.com/NotEnoughUpdates/MoulConfig).
 - Licensing and attribution: [LICENSE](LICENSE) and [third-party notices](licenses).

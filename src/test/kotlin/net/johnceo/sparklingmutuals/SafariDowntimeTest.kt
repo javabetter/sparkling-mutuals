@@ -24,6 +24,23 @@ class SafariDowntimeTest {
         assertEquals("Farmer has requested downtime", SafariDowntime.chat("Party > Farmer: !DT", inSafari = false, self = "Farmer"))
         assertTrue(SafariDowntime.holding)
     }
+    @Test fun `a requester ready before the run ends cancels their pending downtime`() {
+        SafariDowntime.chat("Party > Farmer: !dt food", inSafari = true, self = "Farmer")
+        SafariDowntime.chat("Party > farmer: R", inSafari = true, self = "Farmer")
+        assertNull(SafariDowntime.leftSafari("Farmer"))
+        assertFalse(SafariDowntime.holding)
+        assertEquals("", SafariDowntime.holders())
+    }
+    @Test fun `a pending resume only cancels its own request`() {
+        SafariDowntime.chat("Party > Farmer: !dt", inSafari = true, self = "Me")
+        SafariDowntime.chat("Party > Steve: !dt", inSafari = true, self = "Me")
+        SafariDowntime.chat("Party > Alex: r", inSafari = true, self = "Me")
+        SafariDowntime.chat("Party > Farmer: r", inSafari = true, self = "Me")
+        assertEquals("Steve", SafariDowntime.holders())
+        assertFalse(SafariDowntime.holding)
+        SafariDowntime.leftSafari("Me")
+        assertTrue(SafariDowntime.holding)
+    }
     @Test fun `the hold lasts until every requester says r`() {
         SafariDowntime.chat("Party > Farmer: !dt", inSafari = true, self = "Me")
         SafariDowntime.chat("Party > Steve: !dt brb", inSafari = true, self = "Me")

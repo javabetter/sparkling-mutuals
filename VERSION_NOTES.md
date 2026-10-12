@@ -11,9 +11,16 @@
 - Improved party command help/reply suppression, roster refreshes and automatic retries after API failures.
 - Unified local chat styling and reduced repeated ESP decoding and rendering allocations.
 
-Minecraft 26.1.2 / Java 25 / Fabric. Requires Fabric API and Fabric Language Kotlin; player lookups require a Hypixel API key.
+- Added JavaBetter's enlarged critter ESP and contributed Shiny Hunter icon.
+- Added `!m` missing-run replies, Safari Manager kick holds and `!dt` downtime requests.
+- Added optional Shiny Hunter cloud lookups and `/sparkling` player cards/comparisons.
+- Added party Unique biome PBs and personal honeyhive beacons/refill countdowns.
+- Added run/sparkling history, log import, achievements and Safari statistics.
+- Added Bazaar-based shard/feather profit estimates, a Profit tab and coin achievements.
+- Fixed history import dates/deduplication, price refreshes, API-provider changes, hive state and delayed party replies.
+- Updated mod metadata, authors and repository links for version 3.0.0.
 
-Javabetter's PRs #24–#34 are excluded from this release and remain under review.
+Minecraft 26.1.2 / Java 25 / Fabric. Requires Fabric API and Fabric Language Kotlin. Player lookups support a personal Hypixel API key or the optional Shiny Hunter shared API.
 
 Validation: automated regression tests and build. Live in-game rendering and server integration have not been tested for this release.
 

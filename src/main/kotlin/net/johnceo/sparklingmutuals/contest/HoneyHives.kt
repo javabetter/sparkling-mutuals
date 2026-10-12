@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents
 import net.fabricmc.loader.api.FabricLoader
 import net.johnceo.sparklingmutuals.SparklingMutuals
 import net.johnceo.sparklingmutuals.api.HypixelApi
+import net.johnceo.sparklingmutuals.api.ApiProvider
 import net.johnceo.sparklingmutuals.config.ConfigManager
 import net.johnceo.sparklingmutuals.hud.SkyblockSidebar
 import net.johnceo.sparklingmutuals.safari.EspBoxLines
@@ -63,6 +64,7 @@ object HoneyHives {
     private var refillsScope: String? = null
     private var profile: String? = null
     private var scope: String? = null
+    private var provider: ApiProvider? = null
     private var refilledAt = 0L
     private var refreshing = false
     private var visible = emptyList<Pair<Hive, Int>>()
@@ -117,6 +119,11 @@ object HoneyHives {
     /** A new player or profile: the previous owner's refill times and unmatched loots no longer apply. */
     private fun updateScope(client: Minecraft) {
         val now = HoneyHiveRules.scope(client.player?.uuid?.toString(), profile)
+        ContestTracker.selectScope(now)
+        val currentProvider = HypixelApi.provider
+        if (provider != currentProvider) {
+            provider = currentProvider; refills = null; refillsScope = null; refilledAt = 0
+        }
         if (now == scope) return
         scope = now
         if (pendingScope != now) { pending.clear(); pendingScope = now }
@@ -193,13 +200,14 @@ object HoneyHives {
         if (refreshing) return
         val uuid = client.player?.uuid?.toString() ?: return
         val asked = scope ?: return
+        val askedProvider = HypixelApi.provider
         refreshing = true; refilledAt = now
         executor.submit {
             val result = runCatching { HypixelApi.getHoneyRefills(uuid) }
             client.execute {
                 refreshing = false
                 // A late answer for another player or profile is not this one's.
-                if (asked != scope) { refilledAt = 0; return@execute }
+                if (asked != scope || askedProvider != HypixelApi.provider) { refilledAt = 0; return@execute }
                 result.onFailure { logger.info("Honeyhive refill lookup failed: {}", it.message) }.onSuccess { response ->
                     // The selected profile changed since the Profile ID line: don't trust it for this scope.
                     if (response.profile != null && response.profile.replace("-", "") != profile?.replace("-", "")) return@onSuccess

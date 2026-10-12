@@ -13,6 +13,46 @@ import org.junit.jupiter.api.Test
 class HoneyHiveRulesTest {
     private val hour = HoneyHiveRules.REFILL_MILLIS
 
+    @Test fun `overlapping loot times cannot permanently swap hive ids`() {
+        val pending = linkedMapOf("1,2,3" to 0L, "4,5,6" to 5_000L)
+        val refills = linkedMapOf("hive_b" to hour + 5_000, "hive_a" to hour)
+        assertTrue(HoneyHiveRules.bind(pending, refills, emptySet()).isEmpty())
+        assertTrue(HoneyHiveRules.bind(pending, refills.entries.reversed().associate { it.toPair() }, emptySet()).isEmpty())
+    }
+    @Test fun `a single refill matching two loots remains unbound`() {
+        assertTrue(HoneyHiveRules.bind(mapOf("a" to 0L, "b" to 5_000L), mapOf("hive_a" to hour), emptySet()).isEmpty())
+    }
+    @Test fun `yesterdays completion is not current at the same time of day`() {
+        val now = java.time.LocalDateTime.now()
+        val names = listOf("complete", "windowKey", "completedWindow")
+        val fields = names.map { ContestTracker.javaClass.getDeclaredField(it).apply { isAccessible = true } }
+        val previous = fields.map { it.get(ContestTracker) }
+        try {
+            fields[0].set(ContestTracker, true)
+            fields[1].set(ContestTracker, ContestTracker.windowAt(now.toLocalTime()))
+            fields[2].set(ContestTracker, ContestTracker.absoluteWindow(now.minusDays(1)))
+            assertFalse(ContestTracker.isComplete())
+            assertNull(ContestTracker.completedWindow())
+        } finally { fields.zip(previous).forEach { (field, value) -> field.set(ContestTracker, value) } }
+    }
+    @Test fun `changing profile clears current contest completion and sidebar evidence`() {
+        val names = listOf("scope", "complete", "completedWindow", "windowKey", "points", "tier", "tickCounter")
+        val fields = names.associateWith { ContestTracker.javaClass.getDeclaredField(it).apply { isAccessible = true } }
+        val previous = fields.mapValues { it.value.get(ContestTracker) }
+        try {
+            ContestTracker.selectScope("player.profile-a")
+            fields.getValue("complete").set(ContestTracker, true)
+            fields.getValue("completedWindow").set(ContestTracker, ContestTracker.absoluteWindow(java.time.LocalDateTime.now()))
+            fields.getValue("tier").set(ContestTracker, "UNCOMMON")
+            assertTrue(ContestTracker.isComplete())
+            ContestTracker.selectScope("player.profile-b")
+            assertFalse(ContestTracker.isComplete())
+            assertNull(ContestTracker.completedWindow())
+            assertEquals("", ContestTracker.currentTier())
+            assertEquals(-1, ContestTracker.currentPoints())
+        } finally { fields.forEach { (name, field) -> field.set(ContestTracker, previous.getValue(name)) } }
+    }
+
     @Test fun `your own loot beats a block that still looks full`() {
         assertEquals(HiveState.EMPTY, HoneyHiveRules.state(1000, lootedAt = 0, blockFull = true, refillAt = null, matched = true))
         assertEquals(HiveState.FULL, HoneyHiveRules.state(hour, lootedAt = 0, blockFull = true, refillAt = null, matched = true))

@@ -13,7 +13,8 @@ object HypixelApi {
     private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
 
     /** Lookups go through Shiny Hunter's shared API when no key of your own is set. */
-    val usingCloud get() = ConfigManager.apiKey.isBlank() && ConfigManager.useCloudApi
+    val provider get() = ApiProvider.capture()
+    val usingCloud get() = provider.cloud
 
     private fun profiles(uuid: String): JsonObject =
         if (usingCloud) CloudApi.profiles(uuid) else get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid")

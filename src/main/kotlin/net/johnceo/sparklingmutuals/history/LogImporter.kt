@@ -62,12 +62,15 @@ object LogImporter {
         fun read(reader: BufferedReader, startDay: LocalDate, closeAtEnd: Boolean = true) {
             var day = startDay
             var last = 0L
+            var previousTime: java.time.LocalTime? = null
             reader.lineSequence().forEach { raw ->
+                val timestamp = anyLine.find(raw) ?: return@forEach
+                val time = java.time.LocalTime.of(timestamp.groupValues[1].toInt(), timestamp.groupValues[2].toInt(), timestamp.groupValues[3].toInt())
+                if (previousTime != null && time.toSecondOfDay() < previousTime!!.toSecondOfDay() - 3600) day = day.plusDays(1)
+                previousTime = time
                 if ("[CHAT]" !in raw) return@forEach
                 val m = line.matchEntire(raw) ?: return@forEach
-                var at = day.atTime(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt())
-                    .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                if (last != 0L && at < last - 3_600_000L) { day = day.plusDays(1); at += 86_400_000L } // past midnight
+                val at = day.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 last = at
                 handle(SafariRules.strip(m.groupValues[4]), at)
             }
@@ -166,6 +169,7 @@ object LogImporter {
                 val logs = files(folder, newerThan).toMutableList()
                 val newest = logs.maxOfOrNull { it.modified } ?: 0L
                 val latest = folder.resolve("latest.log")
+                val activeLatest = includeLatest && runCatching { Files.isSameFile(latest, defaultLogs().resolve("latest.log")) }.getOrDefault(false)
                 if (includeLatest && Files.exists(latest)) logs += LogFile(latest, latestStartDay(latest), Int.MAX_VALUE, 0)
                 bytesTotal = maxOf(1L, logs.sumOf { runCatching { Files.size(it.path) }.getOrDefault(0L) })
                 bytesDone = 0; filesTotal = logs.size; filesDone = 0
@@ -173,7 +177,7 @@ object LogImporter {
                 for (log in logs) {
                     runCatching {
                         val input = Files.newInputStream(log.path).let { if (log.path.toString().endsWith(".gz")) GZIPInputStream(it) else it }
-                        input.bufferedReader().use { parser.read(it, log.day, closeAtEnd = log.path != latest) }
+                        input.bufferedReader().use { parser.read(it, log.day, closeAtEnd = log.path != latest || !activeLatest) }
                     }
                     bytesDone += runCatching { Files.size(log.path) }.getOrDefault(0L); filesDone++
                 }

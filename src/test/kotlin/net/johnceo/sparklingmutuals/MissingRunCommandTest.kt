@@ -53,6 +53,18 @@ class MissingRunCommandTest {
         assertEquals("Missing: Forest: Done | Cavern: Snoozle, Rockmite | Icy: Done | Haunted: Gazer",
             SafariMissingReply.format(null, missing))
     }
+    @Test fun `a world transition drops a reply before the stale run ledger updates`() {
+        val command = PartyCommand(PartyCommandKind.MISSING_RUN)
+        val ledger = SafariLedger().apply { enter(1_000) }
+        val asked = ledger.current
+        val askedWorld = Any()
+        assertTrue(SafariMissingReply.holds(command, asked, ledger.current, true, askedWorld, askedWorld))
+        // The command tick runs before the Safari tick has replaced this run or cleared inSafari.
+        assertFalse(SafariMissingReply.holds(command, asked, ledger.current, true, askedWorld, Any()))
+        assertFalse(SafariMissingReply.holds(command, asked, ledger.current, true, askedWorld, null))
+        assertTrue(SafariMissingReply.holds(PartyCommand(PartyCommandKind.MUTUALS), asked,
+            ledger.current, true, askedWorld, Any()))
+    }
     @Test fun `replies are recognised so other clients do not repeat them`() {
         val command = PartyCommand(PartyCommandKind.MISSING_RUN, biome = SafariBiome.HAUNTED)
         assertTrue(command.matchesResponse("Missing Haunted: Gazer"))

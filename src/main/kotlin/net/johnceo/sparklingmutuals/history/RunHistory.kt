@@ -18,12 +18,10 @@ import net.minecraft.client.Minecraft
 object RunHistory {
     class Data(var nextNumber: Int = 1, var runs: MutableList<RunRecord> = mutableListOf())
     private var data = Data()
-    private var active: SafariRun? = null
-    private var tally = RunTally()
-    private val splits = linkedMapOf<String, Long>()
-    private var tickets = 0
-    /** Tickets are handed in at the entrance, before the run starts; held until it does. */
-    private var pendingTickets = 0
+    private val session = LiveHistorySession()
+    private val tally get() = session.tally
+    private val splits get() = session.splits
+    private val tickets get() = session.tickets
     private var ticks = 0
 
     val runs: List<RunRecord> get() = data.runs
@@ -37,22 +35,15 @@ object RunHistory {
     }
 
     private fun chat(raw: String) {
-        if (active == null) return
-        val self = Minecraft.getInstance().player?.name?.string.orEmpty()
-        SafariMessages.lines(raw).forEach { tally.line(it, self) }
+        val client = Minecraft.getInstance()
+        session.chat(SafariTracking.ledger.current, raw, client.player?.name?.string.orEmpty()) { finish(it, client) }
     }
 
-    fun onTicket() { pendingTickets++ }
+    fun onTicket() = session.onTicket(SafariTracking.ledger.current)
 
     fun tick(client: Minecraft) {
-        val run = SafariTracking.ledger.current
-        if (run !== active) {
-            active?.let { finish(it, client) }
-            active = run
-            tally = RunTally(); splits.clear()
-            tickets = pendingTickets; pendingTickets = 0
-        }
-        val current = active ?: return
+        session.sync(SafariTracking.ledger.current) { finish(it, client) }
+        val current = session.active ?: return
         if (++ticks % 10 != 0) return
         val now = System.currentTimeMillis()
         val party = SafariSparklingMode.state
@@ -71,9 +62,8 @@ object RunHistory {
             feathers = tally.feathers, sparklings = tally.sparklings.toMutableList(), ownSparklings = tally.ownSparklings,
             macaws = tally.macaws, splits = LinkedHashMap(splits))
         // A manual import during this run may have read it from latest.log already; the live record replaces that.
-        val imported = data.runs.filter { it.imported && kotlin.math.abs(it.start - record.start) <= HistoryMerge.SAME_RUN_MILLIS }
-        data.runs.removeAll(imported)
-        record.number = imported.minOfOrNull { it.number } ?: data.nextNumber++
+        val imported = HistoryMerge.removeLiveDuplicate(data.runs, record)
+        record.number = imported?.number ?: data.nextNumber++
         record.coins = BazaarPrices.value(record.shards, record.feathers)
         data.runs.add(0, record)
         save()
@@ -102,9 +92,50 @@ object RunHistory {
     fun save() = HistoryStore.save("runs", data)
 }
 
+/** Client-thread tally state shared by chat callbacks and ticks. Finish observes the old state before it resets. */
+internal class LiveHistorySession {
+    var active: SafariRun? = null
+        private set
+    var tally = RunTally()
+        private set
+    val splits = linkedMapOf<String, Long>()
+    var tickets = 0
+        private set
+    private var pendingTickets = 0
+
+    /** A later ticket listener may run after chat has already synchronized the new run. */
+    fun onTicket(run: SafariRun?) {
+        if (run != null && run === active) tickets++ else pendingTickets++
+    }
+
+    fun sync(run: SafariRun?, finish: (SafariRun) -> Unit) {
+        if (run === active) return
+        active?.let(finish)
+        active = run
+        tally = RunTally(); splits.clear()
+        tickets = if (run == null) 0 else pendingTickets
+        if (run != null) pendingTickets = 0
+    }
+
+    fun chat(run: SafariRun?, raw: String, self: String, finish: (SafariRun) -> Unit) {
+        sync(run, finish)
+        if (active == null) return
+        SafariMessages.lines(raw).forEach { tally.line(it, self) }
+    }
+}
+
 /** The merge behind imports, separate so it can be tested. */
 object HistoryMerge {
     const val SAME_RUN_MILLIS = 120_000L
+    /** Replace one overlapping import of this run; nearby, already-finished runs remain separate. */
+    fun removeLiveDuplicate(runs: MutableList<RunRecord>, live: RunRecord): RunRecord? {
+        val imported = runs.filter { it.imported && kotlin.math.abs(it.start - live.start) <= SAME_RUN_MILLIS &&
+            (Math.floorDiv(it.start, 1000L) == Math.floorDiv(live.start, 1000L) ||
+                it.start < live.start + live.length && live.start < it.start + it.length) }
+            .minByOrNull { kotlin.math.abs(it.start - live.start) }
+        if (imported != null) runs.remove(imported)
+        return imported
+    }
     /**
      * Merges [found] into [runs] (newest first afterwards), renumbering oldest first; returns how many were new.
      * Each saved run matches at most one found run, the closest in time; runs found in this batch never match

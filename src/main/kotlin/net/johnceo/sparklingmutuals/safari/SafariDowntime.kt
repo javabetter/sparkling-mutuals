@@ -56,11 +56,13 @@ object SafariDowntime {
             tell("[SM] ${chat.sender} wants downtime after this run" + if (reason.isEmpty()) "." else ": $reason")
             return if (!inSafari) leftSafari(self) else null
         }
-        if (holding && resume.matches(chat.body)) {
+        if (resume.matches(chat.body)) {
             val key = requests.keys.firstOrNull { it.equals(chat.sender, true) } ?: return null
             requests.remove(key)
+            val wasActive = active
             if (requests.isEmpty()) active = false
-            tell("[SM] ${chat.sender} is back" + if (active) "; still waiting on ${holders()}." else ". Safari Manager released.")
+            tell("[SM] ${chat.sender} is back" + if (!wasActive) ". Downtime request cancelled."
+                else if (active) "; still waiting on ${holders()}." else ". Safari Manager released.")
         }
         return null
     }

@@ -51,16 +51,14 @@ object HoneyHiveRules {
         .map { it to (it.x + .5 - x).let { d -> d * d } + (it.y + .5 - y).let { d -> d * d } + (it.z + .5 - z).let { d -> d * d } }
         .filter { it.second <= LOOT_RADIUS * LOOT_RADIUS }.minByOrNull { it.second }?.first
 
-    /** Loots seen here (key -> time) matched to API refill times one hour later; returns key -> hive id. */
+    /** Bind only unambiguous pairs; close loots must never persist the wrong position-to-id mapping. */
     fun bind(pending: Map<String, Long>, refills: Map<String, Long>, taken: Set<String>): Map<String, String> {
-        val bound = linkedMapOf<String, String>()
-        for ((key, lootedAt) in pending) {
-            val id = refills.entries.firstOrNull { (id, at) ->
-                id !in taken && id !in bound.values && kotlin.math.abs(at - (lootedAt + REFILL_MILLIS)) <= MATCH_TOLERANCE
-            }?.key ?: continue
-            bound[key] = id
+        val candidates = pending.mapValues { (_, lootedAt) ->
+            refills.filter { (id, at) -> id !in taken && kotlin.math.abs(at - (lootedAt + REFILL_MILLIS)) <= MATCH_TOLERANCE }.keys
         }
-        return bound
+        return candidates.filterValues { it.size == 1 }
+            .filter { (_, ids) -> candidates.values.count { ids.single() in it } == 1 }
+            .mapValues { (_, ids) -> ids.single() }
     }
 
     /** Lines of `x y z id` (id `-` while unmatched); `#` starts a comment. */

@@ -10,6 +10,33 @@ import java.nio.file.Path
 class SafariSparklingModeTest {
     @TempDir lateinit var dir: Path
     private val all = SafariRoster.all.map { it.name.uppercase().replace(' ', '_') }.toSet()
+    @Test fun `disabling cloud invalidates discoveries for an unchanged party and blank key`() {
+        val savedKey = ConfigManager.apiKey
+        val savedCloud = ConfigManager.useCloudApi
+        try {
+            ConfigManager.apiKey = ""; ConfigManager.useCloudApi = true
+            val state = PartySparklingState()
+            val roster = setOf("me")
+            state.select(roster)
+            assertTrue(state.accept(roster, mapOf("me" to all)))
+            ConfigManager.useCloudApi = false
+            state.select(roster)
+            assertFalse(state.ready)
+            assertTrue(state.needs("Gemzie"))
+        } finally { ConfigManager.apiKey = savedKey; ConfigManager.useCloudApi = savedCloud }
+    }
+    @Test fun `a cloud result arriving after its provider was disabled is rejected`() {
+        val savedKey = ConfigManager.apiKey
+        val savedCloud = ConfigManager.useCloudApi
+        try {
+            ConfigManager.apiKey = ""; ConfigManager.useCloudApi = true
+            val state = PartySparklingState()
+            state.select(setOf("me"))
+            ConfigManager.useCloudApi = false
+            assertFalse(state.accept(setOf("me"), mapOf("me" to all)))
+            assertFalse(state.ready)
+        } finally { ConfigManager.apiKey = savedKey; ConfigManager.useCloudApi = savedCloud }
+    }
     @Test fun `party union includes local needs and never hides from an incomplete roster`() {
         val state = PartySparklingState()
         state.select(setOf("me", "friend"))
