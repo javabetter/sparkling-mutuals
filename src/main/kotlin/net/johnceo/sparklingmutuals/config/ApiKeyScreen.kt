@@ -11,7 +11,7 @@ import net.minecraft.util.FormattedCharSequence
 class ApiKeyScreen(private val parent: Screen?) : Screen(Component.literal("Hypixel API key")) {
     private var draft = ConfigManager.apiKey
     private var reveal = false
-    private var status = "Get a key from developer.hypixel.net"
+    private var status = if (ConfigManager.useCloudApi) "Optional: leave empty to use the Shiny Hunter cloud API" else "Get a key from developer.hypixel.net"
     private lateinit var key: EditBox
     override fun init() {
         val panelWidth = (width - 24).coerceAtMost(400)
@@ -33,7 +33,7 @@ class ApiKeyScreen(private val parent: Screen?) : Screen(Component.literal("Hypi
         control(1, "Save key") {
             ConfigManager.apiKey = draft.trim()
             ConfigManager.save()
-            status = if (draft.isBlank()) "API key cleared" else "API key saved"
+            status = if (draft.isBlank()) (if (ConfigManager.useCloudApi) "API key cleared; using the cloud API" else "API key cleared") else "API key saved"
         }
         control(2, "Back") { onClose() }
     }
