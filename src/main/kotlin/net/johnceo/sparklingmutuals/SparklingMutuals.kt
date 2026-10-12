@@ -44,6 +44,8 @@ object SparklingMutuals : ModInitializer {
         BeeNests.register()
         SafariEsp.register()
         TeammateEsp.register()
+        SafariIsland.register()
+        SafariManagerGuard.register()
         ClientTickEvents.START_CLIENT_TICK.register(AutoClicker::tick)
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
@@ -71,6 +73,8 @@ object SparklingMutuals : ModInitializer {
             SafariTracking.finish()
             SafariEsp.reset()
             AutoClicker.reset()
+            SafariManagerGuard.reset()
+            SafariIsland.reset()
         }
 
 		HudElementRegistry.attachElementBefore(
