@@ -23,6 +23,7 @@ object ConfigManager {
     var warpAlertsEnabled = false
     var warpDelaySeconds = 25
     var hideyhoQuestClicks = true
+    var hideyhoInsideOutside = true
     var hideHauntedPaintings = true
     var shinyDetection = true
     var progressHud = true
@@ -69,7 +70,7 @@ object ConfigManager {
     var showWhere = 1
     val personalBests = SafariPersonalBests()
     private val flags = mapOf(::highlightTeammates to true, ::showTeammateNames to true, ::partyCommandsEnabled to true, ::useCloudApi to true, ::fullClearMode to false, ::sparklingMode to false, ::sparklingProfitableShardEsp to true, ::profitableShardEsp to true, ::timesaveOnly to true, ::warpAlertsEnabled to false,
-        ::hideyhoQuestClicks to true, ::hideHauntedPaintings to true, ::shinyDetection to true,
+        ::hideyhoQuestClicks to true, ::hideyhoInsideOutside to true, ::hideHauntedPaintings to true, ::shinyDetection to true,
         ::progressHud to true, ::countUniqueOnly to false, ::missingPanel to true,
         ::highlightBeeNests to true, ::removeDarkness to true, ::sparklingAlert to true,
         ::sparklingPartyAnnouncer to true, ::catchCountPanel to false, ::autoClicker to true, ::candleHitbox to true, ::holdManagerOnKick to true, ::downtimeCommand to true, ::honeyHives to true, ::honeyHivesOnlyIncomplete to true, ::honeyHiveRefillLabels to true, ::runHistory to true, ::achievements to true, ::achievementSound to true, ::achievementsToParty to false, ::autoImportLogs to true, ::runCoinsInstaSell to false,

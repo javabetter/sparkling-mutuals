@@ -179,6 +179,8 @@ class SafariSettings : Config() {
         @ConfigEditorBoolean var autoClicker = ConfigManager.autoClicker
         @JvmField @ConfigOption(name = "Hideyho quest clicks", desc = "Click with chat open to accept Hideyho’s offer.")
         @ConfigEditorBoolean var hideyho = ConfigManager.hideyhoQuestClicks
+        @JvmField @ConfigOption(name = "Hideyho inside/outside", desc = "Title and chat line saying whether Hideyho hid inside or outside the mansion.")
+        @ConfigEditorBoolean var hideyhoInsideOutside = ConfigManager.hideyhoInsideOutside
         @JvmField @ConfigOption(name = "Hide Haunted paintings", desc = "Hide paintings in the Haunted biome.")
         @ConfigEditorBoolean var paintings = ConfigManager.hideHauntedPaintings
         @JvmField @ConfigOption(name = "Nearby shiny detection", desc = "Highlight sparkling critters within 80 blocks in your biome.")
@@ -282,7 +284,7 @@ class SafariSettings : Config() {
     fun apply(notifyMode: Boolean = false) {
         if (warp.enabled != ConfigManager.warpAlertsEnabled) AlertManager.toggleAlert()
         val changes = listOf(ConfigManager::highlightTeammates to safari.highlightTeammates, ConfigManager::showTeammateNames to safari.showTeammateNames, ConfigManager::profitableShardEsp to modes.unique.profitable, ConfigManager::sparklingProfitableShardEsp to modes.sparkling.profitable, ConfigManager::partyCommandsEnabled to party.enabled, ConfigManager::downtimeCommand to party.downtime, ConfigManager::useCloudApi to api.cloud, ConfigManager::hideHauntedPaintings to safari.paintings,
-            ConfigManager::shinyDetection to safari.shiny, ConfigManager::hideyhoQuestClicks to safari.hideyho,
+            ConfigManager::shinyDetection to safari.shiny, ConfigManager::hideyhoQuestClicks to safari.hideyho, ConfigManager::hideyhoInsideOutside to safari.hideyhoInsideOutside,
             ConfigManager::progressHud to tracking.progress,
             ConfigManager::missingPanel to tracking.missing,
             ConfigManager::removeDarkness to safari.darkness,
