@@ -36,6 +36,8 @@ object SafariBiomeClearTracking {
         run.reconcileStructures(biome, SafariStructures.nearbyMounds > 0 || snapshot.critters.any { it.mound },
             SafariStructures.walls.states.any { it == WallState.INTACT })
         SafariCompletion.tick(client, run, biome)
+        // A scan can prove the last Unique critter absent after its biome's final catch.
+        SafariTracking.checkPartyUnique(client, biome)
         if (biome in run.biomeClears) return
         // A completed entity scan is sufficient; unloaded surrounding chunks must not block a PB.
         val evidence = BiomeClearEvidence(snapshot.scanned,

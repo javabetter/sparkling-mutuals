@@ -110,10 +110,13 @@ class SafariPersonalBests {
     }
     /**
      * The party's Unique Run PB: from run start until every critter of the biome is secured by anyone (loot shares
-     * count), or proven absent. A biome the party cleared before you arrived isn't timed.
+     * count), or proven absent. Checked after each catch and after each scan, since a scan proving Snoozle or Rockmite
+     * absent can be what finishes the biome. Teammates' catches count in whatever order they come relative to your own
+     * travel; catches made before this client entered never reach it, so a biome worked before you arrived can't
+     * complete here.
      */
     fun recordPartyUnique(biome: SafariBiome, run: SafariRun, now: Long): String? {
-        if (run.endedAt != null || now < run.startedAt || biome in run.partyUniqueClears || run.inherited(biome) ||
+        if (run.endedAt != null || now < run.startedAt || biome in run.partyUniqueClears ||
             biome.critters.any { run.count(it.name) == 0 && !run.uniqueUnavailable(it.name) }) return null
         run.partyUniqueClears.add(biome)
         val elapsed = now - run.startedAt
