@@ -2,35 +2,83 @@
 
 A Fabric mod for Hypixel SkyBlock Safari, sparkling discoveries, and Miria contests.
 
-## Features
+## Safari tracking
 
-- **Safari modes:** Full Clear, Unique and Sparkling, with progress, missing-species and capture panels.
-- **Party commands:** shared/missing sparkling discoveries, Safari tickets, command help and personal-best lookups.
-- **Personal bests:** separate Full Clear and Unique biome records, solo/duo Doomspiral and Wumpa records, and observed party boss times.
-- **ESP and helpers:** critters, floor supplies, nests, mounds, walls, party teammates, hidden Litterbugs and Shyworm paths/countdowns.
-- **Alerts:** sparkling discoveries, inventory readiness, run completion, party warp reminders and Miria contest warnings.
-- **Quality of life:** Hideyho quest clicks, mound-only Auto Clicker, red candle hitboxes, painting/darkness removal, capture chat filtering and capsule hiding.
-- **Customization:** movable/resizable HUDs and alerts, configurable colors, backgrounds, sounds and per-biome ESP visibility.
+- **Full Clear mode (`/fc`):** track all required captures and highlight remaining critters.
+- **Unique mode (`/unique`):** track one capture per species and highlight missing uniques.
+- **Sparkling mode (`/sparkle`):** target sparkling discoveries missing for you or your party.
+- **Profitable shard ESP:** keep profitable critters highlighted in Sparkling mode.
+- **Progress HUD:** show elapsed time and overall/per-biome completion.
+- **Missing panel:** list remaining species, nests, mounds, and Snooper walls.
+- **Biome captures HUD:** show species counts and Rockmite mound statistics.
+- **Capture review (`/captures`):** view the current or last run's captures.
+- **Biome personal bests:** save separate Full Clear and Unique clear times.
+- **Boss personal bests:** save solo/duo Doomspiral and Wumpa times, plus observed party records.
+- **Boss capture feedback:** show elapsed capture time and the difference from the previous PB.
+- **Biome announcements:** send `fd`, `cd`, `id`, or `hd` when eligible biomes are complete.
 
-## Commands
+## Highlights and helpers
 
-- `/sm`: settings and command help; `/sm gui`: HUD editor; `/sm debug`: local tracking diagnostics.
-- `/fc`, `/unique`, `/sparkle`: select a Safari mode.
-- `/captures`: current or last run's capture counts.
-- `/apikey <key>`: set your Hypixel API key.
-- `/alert`, `/alertdelay <seconds>`: configure warp reminders.
-- Party chat: `!mutual`, `!missing <IGN>`, `!tickets <IGN>`, `!commands` and `!pb`. See the settings help for mode-specific PB targets and solo/duo options.
+- **Critter ESP:** draw colored boxes around Safari critters across all four biomes.
+- **Floor drop ESP:** highlight needed Safari supplies until their requirements are met.
+- **Bee nest waypoints:** locate nests that still need punching.
+- **Rockmite highlights:** distinguish mounds from spawned silverfish.
+- **Snooper wall waypoints:** locate walls to break for Snoozles.
+- **Hidden Litterbugs:** show projected positions and countdowns while they are underground.
+- **Shyworm helpers:** show projected positions, movement paths, and rest countdowns.
+- **Bird food tracking:** track Forest food collection and feeding progress.
+- **Wumpa prerequisites:** retain needed prerequisite critter highlights in Sparkling mode.
+- **Nearby sparklings HUD:** list detected sparklings and their distances.
+- **Sparkling detection:** highlight nearby sparkling critters in your current biome.
+- **Teammate outlines:** highlight loaded party members throughout SkyBlock.
+- **Teammate names:** show party member names through walls.
+- **Hideyho quest clicks:** accept Hideyho's offer by clicking with chat open.
+- **Mound Auto Clicker:** hold the attack button on Rockmite mounds for 12 CPS.
+- **Candle hitboxes:** make Haunted candle clicks easier while holding Soothing Incense.
+- **Painting removal:** hide paintings in the Haunted biome.
+- **Darkness removal:** remove the darkness effect in Safari.
+- **Chat filtering:** hide repetitive Safari messages while keeping tracking active.
+- **Ground capsule hiding:** hide ordinary dropped capsules in Safari.
+- **Flying capsule hiding:** hide capsules near the camera at a configurable distance.
+
+## Alerts and contests
+
+- **Sparkling alerts:** show and sound an alert for each detected sparkling critter.
+- **Party sparkling announcements:** share the critter, biome, and coordinates in party chat.
+- **All Gems alert:** notify when all three Cavern gem colors are in your inventory.
+- **All Bird Food alert:** notify after collecting three of each Forest bird food.
+- **All Incense alert:** notify when four Soothing Incense are in your inventory.
+- **Run completion alert:** notify when all biomes are complete in the active mode.
+- **Warp reminders (`/alert`, `/alertdelay <seconds>`):** remind you to warp party members before entry closes.
+- **Miria contest HUD:** track contest time, score, and tier.
+- **Miria warnings:** warn below Uncommon at the selected 5-, 3-, and 1-minute marks.
+
+## Party commands and settings
+
+- **`!mutual` / `!mutuals`:** list shared sparkling discoveries that save Safari time.
+- **`!missing <IGN>`:** list a player's missing sparkling discoveries that save time.
+- **`!tickets <IGN>`:** show a player's Safari ticket counts.
+- **`!pb <biome>`:** share Forest, Cavern, Icy, or Haunted PBs for the active mode.
+- **`!pb doom` / `!pb wumpa`:** share solo boss PBs; add `duo` or an IGN for other records.
+- **`!commands`:** show the party commands available in the active mode.
+- **Settings (`/sm`):** toggle features and open command help.
+- **HUD editor (`/sm gui`):** drag HUDs and alerts to move them; scroll to resize.
+- **Appearance:** customize critter/waypoint colors, panel borders, backgrounds, and transparency.
+- **ESP visibility:** independently restrict each biome and floor drops to your current biome.
+- **Alert customization:** choose sounds, volumes, and run completion text.
+- **API key (`/apikey <key>`):** set the Hypixel key used for profile lookups.
+- **Diagnostics (`/sm debug`):** save local entity tracking details to `latest.log`.
 
 ## Installation
 
-Download the mod JAR from [Releases](https://github.com/johnceoskyblock/sparkling-mutuals/releases) and place it in your `mods` folder. Requires Minecraft 26.1.2, Java 25, Fabric Loader 0.19.5 or newer, Fabric API, and Fabric Language Kotlin.
-
-Development builds are available from successful [Actions](https://github.com/johnceoskyblock/sparkling-mutuals/actions) runs: download the **Artifacts** ZIP and extract the JAR without `-sources` in its name.
-
-Player lookups require a [Hypixel API key](https://developer.hypixel.net), entered through settings or `/apikey <key>`.
-
-Release notes are available in each [release description](https://github.com/johnceoskyblock/sparkling-mutuals/releases).
+- Requires Minecraft **26.1.2**, Java **25**, Fabric Loader **0.19.5+**, Fabric API, and Fabric Language Kotlin.
+- Download the JAR from [Releases](https://github.com/johnceoskyblock/sparkling-mutuals/releases) and place it in your `mods` folder.
+- Development builds: download the Artifacts ZIP from a successful [Actions run](https://github.com/johnceoskyblock/sparkling-mutuals/actions) and extract the JAR without `-sources` in its name.
+- Profile lookups and Sparkling mode require a [Hypixel API key](https://developer.hypixel.net).
+- Release notes are in the [release descriptions](https://github.com/johnceoskyblock/sparkling-mutuals/releases).
 
 ## Credits
 
-Includes work adapted from [CritterMod v0.9.0](https://github.com/MrCloudy2/critterMod/tree/v0.9.0), [ShinyHunter](https://github.com/javabetter/ShinyHunter), [Nebulune](https://github.com/Gaeritag/Nebulune), and [SkyHanni 9.1.0](https://github.com/hannibal002/SkyHanni/tree/9.1.0). Settings use [MoulConfig](https://github.com/NotEnoughUpdates/MoulConfig). See [LICENSE](LICENSE) and [third-party notices](licenses) for licensing and attribution.
+- Adapted work: [CritterMod v0.9.0](https://github.com/MrCloudy2/critterMod/tree/v0.9.0), [ShinyHunter](https://github.com/javabetter/ShinyHunter), [Nebulune](https://github.com/Gaeritag/Nebulune), and [SkyHanni 9.1.0](https://github.com/hannibal002/SkyHanni/tree/9.1.0).
+- Settings: [MoulConfig](https://github.com/NotEnoughUpdates/MoulConfig).
+- Licensing and attribution: [LICENSE](LICENSE) and [third-party notices](licenses).
