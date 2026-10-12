@@ -216,6 +216,7 @@ class SafariRun(val startedAt: Long) {
     }
     val biomeClears = mutableSetOf<SafariBiome>()
     val uniqueBiomeClears = mutableSetOf<SafariBiome>()
+    val partyUniqueClears = mutableSetOf<SafariBiome>()
     val moundSurvey = MoundSurvey()
     val allMoundsBroken get() = moundSurvey.allBroken
     fun moundsComplete(remaining: Set<String>? = nearby[SafariBiome.CAVERN]) = remaining != null &&

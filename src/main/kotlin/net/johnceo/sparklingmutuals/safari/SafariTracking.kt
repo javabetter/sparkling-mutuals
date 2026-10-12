@@ -62,6 +62,7 @@ object SafariTracking {
         SafariAssist.markEntered()
         ensureRun(client)
         ledger.current!!.record(catch)
+        checkPartyUnique(client, catch.critter.biome, now)
         if (catch.personal) {
             SafariEsp.caught(catch.critter.name)
             ConfigManager.personalBests.recordUnique(catch.critter.biome, ledger.current!!, now)?.let { notice ->
@@ -93,5 +94,13 @@ object SafariTracking {
         if (ConfigManager.missingPanel) SafariPanels.missing(run, biome, unique, BeeNests.unpunchedCount,
             SafariStructures.nearbyMounds, SafariStructures.walls).draw(graphics, SafariHud.MISSING)
         if (ConfigManager.catchCountPanel) SafariPanels.captures(run, biome).draw(graphics, SafariHud.CAPTURES)
+    }
+    /** Party Unique PBs are checked after catches and after scans (absence evidence), see recordPartyUnique. */
+    fun checkPartyUnique(client: Minecraft, biome: SafariBiome, now: Long = System.currentTimeMillis()) {
+        if (SafariFullClear.mode != SafariMode.UNIQUE) return
+        val run = ledger.current ?: return
+        ConfigManager.personalBests.recordPartyUnique(biome, run, now)?.let { notice ->
+            ConfigManager.save(); client.player?.sendSystemMessage(LocalChat.component(notice))
+        }
     }
 }
