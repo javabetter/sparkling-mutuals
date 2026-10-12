@@ -19,10 +19,7 @@ object HypixelApi {
         if (usingCloud) CloudApi.profiles(uuid) else get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid")
 
     fun getCurrentProfileUuid(uuid: String): String = data {
-        val profiles = profiles(uuid)
-            .getAsJsonArray("profiles") ?: throw ApiFailure.dataUnavailable()
-        profiles.firstOrNull { it.asJsonObject.get("selected")?.asBoolean == true }
-            ?.asJsonObject?.get("profile_id")?.asString ?: throw ApiFailure.dataUnavailable()
+        CloudProfiles.selectedProfileId(profiles(uuid)) ?: throw ApiFailure.dataUnavailable()
     }
 
     fun getSparklingCritters(playerUuid: String, profileUuid: String): Set<String> = data {
@@ -57,9 +54,7 @@ object HypixelApi {
     private fun getMember(playerUuid: String, profileUuid: String): JsonObject = data {
         val member = playerUuid.replace("-", "")
         // The shared API serves only the profiles list (cached), so the member is read from there.
-        if (usingCloud) profiles(playerUuid).getAsJsonArray("profiles")
-            ?.map { it.asJsonObject }?.firstOrNull { it.get("profile_id")?.asString == profileUuid }
-            ?.getAsJsonObject("members")?.getAsJsonObject(member) ?: throw ApiFailure.dataUnavailable()
+        if (usingCloud) CloudProfiles.member(profiles(playerUuid), playerUuid, profileUuid) ?: throw ApiFailure.dataUnavailable()
         else get("https://api.hypixel.net/v2/skyblock/profile?profile=$profileUuid")
             .getAsJsonObject("profile")?.getAsJsonObject("members")
             ?.getAsJsonObject(member) ?: throw ApiFailure.dataUnavailable()
