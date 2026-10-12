@@ -1,6 +1,6 @@
 package net.johnceo.sparklingmutuals.contest
 
-enum class HiveState { FULL, EMPTY, UNKNOWN }
+enum class HiveState { FULL, EMPTY }
 
 /** A honeyhive position and, once matched, the id Hypixel's API knows it by (`hive_8`). */
 data class Hive(val x: Int, val y: Int, val z: Int, var id: String? = null) {
@@ -17,19 +17,21 @@ object HoneyHiveRules {
     const val LOOT_RADIUS = 8.0
 
     /**
-     * Personal cooldowns first, since hives are looted per player and the block can still look full to you: your own
-     * loot seen here, then the API's pending refill for a matched hive (a loot from another session). A Queen Bee
-     * refill seen after that loot cancels it. Then the block itself when it's loaded. Last, a matched hive with no
-     * refill pending is full, but only when the API actually sent refill data (`refillsKnown`): a profile without a
-     * `foraging.honey` section tells us nothing, so that hive stays unknown.
+     * Every hive is tracked on its own by one number, when it refills: empty until then, full after. Nothing else
+     * brings a hive back early, the block's look included, since hives are looted per player and the block goes on
+     * looking full to you after you've emptied it. A hive never looted is full.
      */
-    fun state(now: Long, lootedAt: Long?, blockFull: Boolean?, refillAt: Long?, matched: Boolean,
-        refillsKnown: Boolean = true, queenRefilledAt: Long? = null): HiveState = when {
-        lootedAt != null && now < lootedAt + REFILL_MILLIS -> HiveState.EMPTY
-        refillAt != null && now < refillAt && (queenRefilledAt == null || refillAt - REFILL_MILLIS > queenRefilledAt) -> HiveState.EMPTY
-        blockFull != null -> if (blockFull) HiveState.FULL else HiveState.EMPTY
-        matched && refillsKnown -> HiveState.FULL
-        else -> HiveState.UNKNOWN
+    fun state(now: Long, refillAt: Long?): HiveState = if (refillAt != null && now < refillAt) HiveState.EMPTY else HiveState.FULL
+
+    /**
+     * Folds the API's refill time for a hive into its own: the later one wins, since the API can lag a loot just seen
+     * here. A time from a loot before the hive's last Queen Bee proc is stale (the API's time runs a second or so past
+     * the loot, hence the tolerance), and one already passed changes nothing.
+     */
+    fun merge(current: Long?, apiRefill: Long, queenAt: Long?, now: Long): Long? = when {
+        apiRefill <= now -> current
+        queenAt != null && apiRefill - REFILL_MILLIS <= queenAt + MATCH_TOLERANCE -> current
+        else -> maxOf(current ?: apiRefill, apiRefill)
     }
 
     /** Hive loots belong to one player's SkyBlock profile; unknown until both are known. */
@@ -39,9 +41,9 @@ object HoneyHiveRules {
     /** Hypixel sends `Profile ID: <uuid>` whenever you join a SkyBlock server. */
     fun profileId(line: String): String? = profileId.matchEntire(line.trim())?.groupValues?.get(1)?.lowercase()
 
-    /** `loot.<scope>.<x,y,z>` entries back to (scope, key, time); entries without an owner are dropped. */
-    fun parseLoot(name: String, value: String): Triple<String, String, Long>? {
-        val rest = name.removePrefix("loot.").takeIf { it != name } ?: return null
+    /** `<prefix>.<scope>.<x,y,z>` entries back to (scope, key, time); entries without an owner are dropped. */
+    fun parseLoot(name: String, value: String, prefix: String = "loot"): Triple<String, String, Long>? {
+        val rest = name.removePrefix("$prefix.").takeIf { it != name } ?: return null
         val cut = rest.lastIndexOf('.').takeIf { it > 0 } ?: return null
         val time = value.toLongOrNull() ?: return null
         return Triple(rest.substring(0, cut), rest.substring(cut + 1), time)
