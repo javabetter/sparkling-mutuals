@@ -60,7 +60,7 @@ object SafariManagerGuard {
     private fun blocks(client: Minecraft): Boolean {
         val player = client.player ?: return false
         val kick = ConfigManager.holdManagerOnKick && holding()
-        val downtime = SafariDowntime.holding
+        val downtime = SafariDowntime.holding // false whenever the downtime setting is off
         if (!(kick || downtime) || !SafariIsland.onIsland) return false
         if (player.isShiftKeyDown) {
             // Deliberate override; it also spends the downtime hold, which is a one-shot.
