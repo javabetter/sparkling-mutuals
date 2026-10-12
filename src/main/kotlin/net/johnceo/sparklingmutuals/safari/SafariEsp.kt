@@ -251,7 +251,7 @@ object SafariEsp {
             e is ArmorStand -> AABB(e.x - .3, e.y + 1.35, e.z - .3, e.x + .3, e.y + 1.95, e.z + .3)
             else -> e.boundingBox
         }
-        return box.move(e.getPosition(delta).subtract(e.position()))
+        return EspBoxSize.padded(box.move(e.getPosition(delta).subtract(e.position())))
     }
     private fun render(context: LevelRenderContext) {
         val client = Minecraft.getInstance()
