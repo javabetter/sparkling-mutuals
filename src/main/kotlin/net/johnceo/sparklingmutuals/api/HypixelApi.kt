@@ -55,6 +55,12 @@ object HypixelApi {
         SafariProfile.from(getMember(playerUuid, getCurrentProfileUuid(playerUuid)))
     }
 
+    /** Hive id -> when it refills, for hives looted in the last hour on any session. */
+    fun getHoneyRefills(playerUuid: String): HoneyRefills = data {
+        val profile = getCurrentProfileUuid(playerUuid)
+        HoneyRefills(profile, HoneyRefills.read(getMember(playerUuid, profile)))
+    }
+
     private fun getMember(playerUuid: String, profileUuid: String): JsonObject = data {
         val member = playerUuid.replace("-", "")
         // The shared API serves only the profiles list (cached), so the member is read from there.

@@ -23,6 +23,7 @@ class SafariSettings : Config() {
     @JvmField @Category(name = "Modes", desc = "") val modes = Modes()
     @JvmField @Category(name = "Party commands", desc = "") val party = Party()
     @JvmField @Category(name = "Miria contest", desc = "") val miria = Miria()
+    @JvmField @Category(name = "Honeyhives", desc = "") val honey = Honey()
     @JvmField @Category(name = "Warp reminders", desc = "") val warp = Warp()
     @JvmField @Category(name = "Safari helpers", desc = "") val safari = Safari()
     @JvmField @Category(name = "Safari progress", desc = "") val tracking = Tracking()
@@ -119,6 +120,14 @@ class SafariSettings : Config() {
         @ConfigEditorText var sound = ContestConfig.contestSound
         @JvmField @ConfigOption(name = "Save sound", desc = "Apply the warning sound.")
         @ConfigEditorButton(runnableId = 7, buttonText = "Save sound") var saveSound = false
+    }
+    class Honey {
+        @JvmField @ConfigOption(name = "Honeyhive beacons", desc = "Beacons over full Torrhus Canyon honeyhives.")
+        @ConfigEditorBoolean var enabled = ConfigManager.honeyHives
+        @JvmField @ConfigOption(name = "Only while contest incomplete", desc = "Hide the beacons once Miria's contest is done.")
+        @ConfigEditorBoolean var onlyIncomplete = ConfigManager.honeyHivesOnlyIncomplete
+        @JvmField @ConfigOption(name = "Refill countdown", desc = "Over a hive you looted, show how long until it refills. Remembered across restarts.")
+        @ConfigEditorBoolean var refillLabels = ConfigManager.honeyHiveRefillLabels
     }
     class Warp {
         @JvmField @ConfigOption(name = "Warp reminder", desc = "Remind you to warp party leechers in before entry closes.")
@@ -260,7 +269,7 @@ class SafariSettings : Config() {
             ConfigManager::missingPanel to tracking.missing,
             ConfigManager::removeDarkness to safari.darkness,
             ConfigManager::sparklingAlert to safari.alert, ConfigManager::sparklingPartyAnnouncer to safari.announce,
-            ConfigManager::autoClicker to safari.autoClicker, ConfigManager::candleHitbox to safari.candleHitbox, ConfigManager::holdManagerOnKick to safari.holdManagerOnKick, ConfigManager::hideCaptureChat to safari.hideCaptureChat,
+            ConfigManager::autoClicker to safari.autoClicker, ConfigManager::candleHitbox to safari.candleHitbox, ConfigManager::holdManagerOnKick to safari.holdManagerOnKick, ConfigManager::honeyHives to honey.enabled, ConfigManager::honeyHivesOnlyIncomplete to honey.onlyIncomplete, ConfigManager::honeyHiveRefillLabels to honey.refillLabels, ConfigManager::hideCaptureChat to safari.hideCaptureChat,
             ConfigManager::allGemsAlert to safari.alerts.gems, ConfigManager::allBirdFoodAlert to safari.alerts.birdFood,
             ConfigManager::allIncenseAlert to safari.alerts.incense, ConfigManager::runCompleteAlert to safari.alerts.runComplete,
             ConfigManager::hideGroundCapsules to safari.hideGroundCapsules, ConfigManager::hideFlyingCapsules to safari.hideFlyingCapsules)
