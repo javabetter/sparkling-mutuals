@@ -8,6 +8,9 @@ import net.johnceo.sparklingmutuals.config.ConfigManager
 import net.johnceo.sparklingmutuals.party.PartyManager
 import net.johnceo.sparklingmutuals.safari.SafariMode
 import net.johnceo.sparklingmutuals.safari.SafariFullClear
+import net.johnceo.sparklingmutuals.safari.SafariAssist
+import net.johnceo.sparklingmutuals.safari.SafariRun
+import net.johnceo.sparklingmutuals.safari.SafariTracking
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import java.util.concurrent.Executors
@@ -15,7 +18,7 @@ import java.util.concurrent.Future
 
 object PartyCommands {
     private data class Pending(val request: PartyRequest, val roster: List<String>, val election: ResponderElection, val chatCursor: Long,
-        val mode: SafariMode = SafariFullClear.mode, var task: Future<*>? = null, var chunks: List<String>? = null)
+        val mode: SafariMode = SafariFullClear.mode, val run: SafariRun? = null, var task: Future<*>? = null, var chunks: List<String>? = null)
     private val pending = mutableMapOf<String, Pending>()
     private data class Failed(val state: Pending, val connection: Any?, val window: ApiRetryWindow)
     private val failed = mutableMapOf<String, Failed>()
@@ -23,7 +26,7 @@ object PartyCommands {
     private val requests = mutableMapOf<String, PartyRequest>()
     private val history = PartyResponseHistory()
     private data class QueuedReply(val token: String, val body: String, val roster: List<String>, val mode: SafariMode,
-        val cursor: Long, val part: Int)
+        val cursor: Long, val part: Int, val command: PartyCommand, val run: SafariRun?)
     private val replies = ArrayDeque<QueuedReply>()
     private var sentReplyAt = 0L
     private val executor = Executors.newSingleThreadExecutor { Thread(it, "Sparkling Mutuals lookups").apply { isDaemon = true } }
@@ -45,6 +48,9 @@ object PartyCommands {
         val parsed = PartyCommand.fromChat(text) ?: return
         val request = parsed.copy(command = parsed.command.forResponder(Minecraft.getInstance().player?.name?.string ?: return))
         if (!request.command.allowed() || !request.command.answerable()) return
+        // Bind run-scoped commands to the run they were asked in; every later stage rechecks it.
+        val run = SafariTracking.ledger.current
+        if (!stillFor(request.command, run)) return
         val chatCursor = history.cursor
         if (now - (recent[request.token] ?: 0) < 10_000) return
         recent[request.token] = now
@@ -56,12 +62,15 @@ object PartyCommands {
         val mode = SafariFullClear.mode
         PartyManager.withPartyInfo {
             if (client.connection !== connection || !ConfigManager.partyCommandsEnabled ||
-                requests[request.token] !== request || mode != SafariFullClear.mode) return@withPartyInfo
+                requests[request.token] !== request || mode != SafariFullClear.mode || !stillFor(request.command, run)) return@withPartyInfo
             val local = client.player?.uuid?.toString() ?: return@withPartyInfo
             val roster = PartyManager.withLocal(local)?.toList() ?: return@withPartyInfo
-            pending[request.token] = Pending(request, roster, ResponderElection(local, roster, now), chatCursor, mode)
+            pending[request.token] = Pending(request, roster, ResponderElection(local, roster, now), chatCursor, mode, run)
         }
     }
+
+    private fun stillFor(command: PartyCommand, run: SafariRun?) =
+        SafariMissingReply.holds(command, run, SafariTracking.ledger.current, SafariAssist.inSafari)
 
     private fun sameParty(client: Minecraft, roster: List<String>) =
         client.player?.uuid?.toString()?.let(PartyManager::withLocal) == roster.toSet()
@@ -75,18 +84,18 @@ object PartyCommands {
             val (token, retry) = retryIterator.next()
             val state = retry.state
             if (retry.connection !== client.connection || state.mode != SafariFullClear.mode ||
-                !state.request.command.allowed() || !sameParty(client, state.roster) ||
+                !state.request.command.allowed() || !stillFor(state.request.command, state.run) || !sameParty(client, state.roster) ||
                 history.hasReply(state.request.command, state.chatCursor, state.roster)) {
                 retryIterator.remove()
             } else if (retry.window.due(now, ConfigManager.apiKey)) {
                 pending[token] = Pending(state.request, state.roster,
-                    ResponderElection(client.player!!.uuid.toString(), state.roster, now), state.chatCursor, state.mode)
+                    ResponderElection(client.player!!.uuid.toString(), state.roster, now), state.chatCursor, state.mode, state.run)
                 retryIterator.remove()
             }
         }
         if (replies.isNotEmpty()) {
             val reply = replies.first()
-            if (reply.mode != SafariFullClear.mode || !sameParty(client, reply.roster) ||
+            if (reply.mode != SafariFullClear.mode || !stillFor(reply.command, reply.run) || !sameParty(client, reply.roster) ||
                 history.containsResult(reply.body, reply.cursor, reply.roster)) replies.removeFirst()
             else if (reply.part == 0 || now - sentReplyAt >= 1500) {
                 replies.removeFirst()
@@ -99,7 +108,8 @@ object PartyCommands {
         val iterator = pending.entries.iterator()
         while (iterator.hasNext()) {
             val (token, state) = iterator.next()
-            if (state.mode != SafariFullClear.mode || !state.request.command.allowed() || state.election.expired(now) || !sameParty(client, state.roster)) {
+            if (state.mode != SafariFullClear.mode || !state.request.command.allowed() || !stillFor(state.request.command, state.run) ||
+                state.election.expired(now) || !sameParty(client, state.roster)) {
                 state.task?.cancel(false)
                 iterator.remove(); continue
             }
@@ -107,22 +117,25 @@ object PartyCommands {
             if (chunks != null && state.election.canPublish(now)) {
                 chunks.forEachIndexed { part, body ->
                     if (!history.containsResult(body, state.chatCursor, state.roster))
-                        replies.addLast(QueuedReply(token, body, state.roster, state.mode, state.chatCursor, part))
+                        replies.addLast(QueuedReply(token, body, state.roster, state.mode, state.chatCursor, part, state.request.command, state.run))
                 }
                 iterator.remove()
             } else if (state.election.shouldStartLookup(now)) {
                 val connection = client.connection
                 val key = ConfigManager.apiKey
                 val localName = client.player!!.name.string
+                // `!m` reads the bound run's ledger, so it is answered here on the client thread, not by the lookup thread.
+                val runReply = if (state.request.command.kind == PartyCommandKind.MISSING_RUN)
+                    SafariMissingReply.current(state.request.command.biome, state.run) else null
                 state.task = executor.submit {
                     // Network calls stay off the client thread; the shared cache is key-scoped.
                     val result = PartyLookupResult.fetch(state.request.command, key) {
-                        SafariLookup.run(state.request.command, state.roster, localName)
+                        runReply ?: SafariLookup.run(state.request.command, state.roster, localName)
                     }
                     client.execute {
                         if (pending[token] === state &&
                             client.connection === connection && ConfigManager.partyCommandsEnabled && state.mode == SafariFullClear.mode && state.request.command.allowed() &&
-                            sameParty(client, state.roster)) {
+                            stillFor(state.request.command, state.run) && sameParty(client, state.roster)) {
                             if (result.successful && (!state.request.command.requiresApiKey || ConfigManager.apiKey == key)) {
                                 state.chunks = PartyReplyChunks.split(result.partyMessage!!)
                                 state.election.lookupReady(System.currentTimeMillis())
