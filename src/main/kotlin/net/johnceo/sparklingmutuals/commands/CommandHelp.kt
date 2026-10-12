@@ -22,6 +22,7 @@ object CommandHelp {
         "/sm" to "Settings",
         "/sm gui" to "Move and resize HUDs",
         "/captures" to "Current or last run captures",
+        "/sparkling [IGN|party|IGNs]" to "Sparkling card, or shared sparklings",
         "/sm debug" to "Save entity diagnostics",
         "/fc" to "Full clear mode",
         "/unique" to "Unique run mode",

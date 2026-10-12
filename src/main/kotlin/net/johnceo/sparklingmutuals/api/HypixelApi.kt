@@ -51,6 +51,10 @@ object HypixelApi {
         }
     }
 
+    fun getSafariProfile(playerUuid: String): SafariProfile = data {
+        SafariProfile.from(getMember(playerUuid, getCurrentProfileUuid(playerUuid)))
+    }
+
     private fun getMember(playerUuid: String, profileUuid: String): JsonObject = data {
         val member = playerUuid.replace("-", "")
         // The shared API serves only the profiles list (cached), so the member is read from there.
