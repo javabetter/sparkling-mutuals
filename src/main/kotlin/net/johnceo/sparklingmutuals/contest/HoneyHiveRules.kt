@@ -17,16 +17,34 @@ object HoneyHiveRules {
     const val LOOT_RADIUS = 8.0
 
     /**
-     * Best evidence first: your own loot (hives are looted per player, so the block can still look full to you),
-     * then the block itself when it's loaded, then the API's refill time for a matched hive. A matched hive with no
-     * refill pending is full; an unmatched one we know nothing about is unknown.
+     * Personal cooldowns first, since hives are looted per player and the block can still look full to you: your own
+     * loot seen here, then the API's pending refill for a matched hive (a loot from another session). A Queen Bee
+     * refill seen after that loot cancels it. Then the block itself when it's loaded. Last, a matched hive with no
+     * refill pending is full, but only when the API actually sent refill data (`refillsKnown`): a profile without a
+     * `foraging.honey` section tells us nothing, so that hive stays unknown.
      */
-    fun state(now: Long, lootedAt: Long?, blockFull: Boolean?, refillAt: Long?, matched: Boolean): HiveState = when {
+    fun state(now: Long, lootedAt: Long?, blockFull: Boolean?, refillAt: Long?, matched: Boolean,
+        refillsKnown: Boolean = true, queenRefilledAt: Long? = null): HiveState = when {
         lootedAt != null && now < lootedAt + REFILL_MILLIS -> HiveState.EMPTY
+        refillAt != null && now < refillAt && (queenRefilledAt == null || refillAt - REFILL_MILLIS > queenRefilledAt) -> HiveState.EMPTY
         blockFull != null -> if (blockFull) HiveState.FULL else HiveState.EMPTY
-        refillAt != null -> if (now < refillAt) HiveState.EMPTY else HiveState.FULL
-        matched -> HiveState.FULL
+        matched && refillsKnown -> HiveState.FULL
         else -> HiveState.UNKNOWN
+    }
+
+    /** Hive loots belong to one player's SkyBlock profile; unknown until both are known. */
+    fun scope(player: String?, profile: String?): String? =
+        if (player.isNullOrBlank() || profile.isNullOrBlank()) null else "${player.replace("-", "")}.${profile.replace("-", "")}"
+    private val profileId = Regex("^Profile ID: ([0-9a-fA-F-]{32,36})$")
+    /** Hypixel sends `Profile ID: <uuid>` whenever you join a SkyBlock server. */
+    fun profileId(line: String): String? = profileId.matchEntire(line.trim())?.groupValues?.get(1)?.lowercase()
+
+    /** `loot.<scope>.<x,y,z>` entries back to (scope, key, time); entries without an owner are dropped. */
+    fun parseLoot(name: String, value: String): Triple<String, String, Long>? {
+        val rest = name.removePrefix("loot.").takeIf { it != name } ?: return null
+        val cut = rest.lastIndexOf('.').takeIf { it > 0 } ?: return null
+        val time = value.toLongOrNull() ?: return null
+        return Triple(rest.substring(0, cut), rest.substring(cut + 1), time)
     }
 
     fun nearest(hives: Collection<Hive>, x: Double, y: Double, z: Double): Hive? = hives

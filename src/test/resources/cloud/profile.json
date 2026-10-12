@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "profiles": [
+    {
+      "profile_id": "11111111-2222-3333-4444-555555555555",
+      "cute_name": "Apple",
+      "selected": true,
+      "members": {
+        "0123456789abcdef0123456789abcdef": {
+          "safari": {
+            "discovered_sparkling_critters": [
+              "SOLSNATCHER",
+              "GAZER"
+            ],
+            "tickets": {
+              "basic": 39,
+              "economy": 4,
+              "premium": 1
+            }
+          },
+          "player_data": {
+            "experience": {
+              "SKILL_HUNTING": 3150000.5
+            }
+          },
+          "currencies": {
+            "essence": {
+              "SAFARI": {
+                "current": 12212
+              }
+            }
+          },
+          "foraging": {
+            "honey": {
+              "refill_times": {
+                "hive_8": 1760000000000,
+                "hive_12": 1760000300000
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

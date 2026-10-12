@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "profiles": [
+    {
+      "profile_id": "11111111-2222-3333-4444-555555555555",
+      "cute_name": "Apple",
+      "selected": true,
+      "members": {
+        "00000000000000000000000000000001": {
+          "safari": {
+            "tickets": {
+              "basic": 1
+            }
+          },
+          "player_data": {
+            "experience": {}
+          },
+          "currencies": {
+            "essence": {}
+          },
+          "foraging": {}
+        }
+      }
+    }
+  ]
+}

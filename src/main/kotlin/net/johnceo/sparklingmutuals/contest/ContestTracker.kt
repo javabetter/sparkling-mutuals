@@ -56,13 +56,17 @@ object ContestTracker {
         maybeWarn(client)
     }
 
+    /** The contest window a time of day falls in. */
+    fun windowAt(time: LocalTime): Long =
+        (Math.floorMod(time.toSecondOfDay() - FIRST_START_MINUTE * 60, 86400) / WINDOW_SECONDS).toLong()
+
     private fun rollWindow() {
         val now = LocalTime.now()
         val shifted = Math.floorMod(
             now.toSecondOfDay() - FIRST_START_MINUTE * 60,
             86400
         )
-        val key = (shifted / WINDOW_SECONDS).toLong()
+        val key = windowAt(now)
 
         secondsIntoWindow = shifted % WINDOW_SECONDS
 
@@ -175,7 +179,12 @@ object ContestTracker {
         )
     }
 
-    fun isComplete(): Boolean = complete
+    /**
+     * Completion only counts for the window it was seen in. With contest tracking off the window stops rolling, so a
+     * completion from an earlier contest must not carry over into later ones.
+     */
+    fun isComplete(): Boolean = completeFor(complete, windowKey, windowAt(LocalTime.now()))
+    fun completeFor(complete: Boolean, seenWindow: Long, currentWindow: Long) = complete && seenWindow == currentWindow
 
     fun currentTier(): String = tier
 

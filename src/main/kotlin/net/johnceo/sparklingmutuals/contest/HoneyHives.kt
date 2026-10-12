@@ -35,7 +35,9 @@ import java.util.concurrent.Executors
  *
  * Positions ship in `honeyhives.txt` and more are learned from the hive build (oak fence below, oak trapdoor above).
  * The API names hives `hive_8` without saying where they are; a loot seen here at T binds the position to whichever
- * hive's refill time lands on T + 1h, and bindings are saved.
+ * hive's refill time lands on T + 1h, and bindings are saved. Positions and ids are the same for everyone; loots and
+ * refill times are per player and profile, so they are kept under the owner's scope (player UUID + the profile id
+ * Hypixel announces on join) and an API answer for an earlier scope is thrown away.
  */
 object HoneyHives {
     private val logger = LoggerFactory.getLogger("sparkling-mutuals/honeyhives")
@@ -49,9 +51,18 @@ object HoneyHives {
     private const val EMPTY_LABEL = 0xFFFF6E6E.toInt()
 
     private val hives = linkedMapOf<String, Hive>()
-    private val lootedAt = mutableMapOf<String, Long>()
+    /** Scope -> hive key -> loot time. */
+    private val loots = mutableMapOf<String, MutableMap<String, Long>>()
+    /** Scope -> hive key -> Queen Bee refill time, which voids an earlier pending API refill. */
+    private val queenRefills = mutableMapOf<String, MutableMap<String, Long>>()
+    /** Loots of still-unmatched hives, waiting for the same scope's API refill times. */
     private val pending = linkedMapOf<String, Long>()
-    @Volatile private var refills = emptyMap<String, Long>()
+    private var pendingScope: String? = null
+    /** The API's refill times, null until known or when the profile has no honey data. */
+    private var refills: Map<String, Long>? = null
+    private var refillsScope: String? = null
+    private var profile: String? = null
+    private var scope: String? = null
     private var refilledAt = 0L
     private var refreshing = false
     private var visible = emptyList<Pair<Hive, Int>>()
@@ -80,14 +91,22 @@ object HoneyHives {
     }
 
     private fun chat(text: String) {
-        if (!ConfigManager.honeyHives || text.startsWith("Party >") || text.startsWith("Guild >")) return
+        if (text.startsWith("Party >") || text.startsWith("Guild >")) return
+        HoneyHiveRules.profileId(text)?.let { profile = it; updateScope(Minecraft.getInstance()); return }
+        if (!ConfigManager.honeyHives) return
         val player = Minecraft.getInstance().player ?: return
+        val owner = scope ?: return
         val hive = HoneyHiveRules.nearest(hives.values, player.x, player.y, player.z)
+        val now = System.currentTimeMillis()
         when {
-            queenBee.containsMatchIn(text) -> hive?.let { lootedAt.remove(it.key); pending.remove(it.key); save() }
+            queenBee.containsMatchIn(text) -> hive?.let {
+                loots[owner]?.remove(it.key); pending.remove(it.key)
+                queenRefills.getOrPut(owner) { mutableMapOf() }[it.key] = now
+                save()
+            }
             looted.containsMatchIn(text) -> if (hive != null) {
-                val now = System.currentTimeMillis()
-                lootedAt[hive.key] = now
+                loots.getOrPut(owner) { mutableMapOf() }[hive.key] = now
+                queenRefills[owner]?.remove(hive.key)
                 if (hive.id == null) pending[hive.key] = now
                 save()
                 refilledAt = 0 // ask the API again soon, to match the hive's id
@@ -95,8 +114,20 @@ object HoneyHives {
         }
     }
 
+    /** A new player or profile: the previous owner's refill times and unmatched loots no longer apply. */
+    private fun updateScope(client: Minecraft) {
+        val now = HoneyHiveRules.scope(client.player?.uuid?.toString(), profile)
+        if (now == scope) return
+        scope = now
+        if (pendingScope != now) { pending.clear(); pendingScope = now }
+        if (refillsScope != now) { refills = null; refillsScope = null }
+        refilledAt = 0
+    }
+
     fun tick(client: Minecraft) {
+        if (client.player == null || client.connection == null) { profile = null; scope = null }
         if (client.level !== level) { level = client.level; onTorrhus = false; visible = emptyList(); labels = emptyList() }
+        updateScope(client)
         if (++ticks % 20 != 0) return
         val world = client.level ?: return
         val player = client.player ?: return
@@ -110,7 +141,11 @@ object HoneyHives {
         if (ticks % 40 == 0) survey(client)
         val now = System.currentTimeMillis()
         if (now - refilledAt > API_REFRESH_MILLIS) refresh(client, now)
-        lootedAt.entries.removeIf { now >= it.value + HoneyHiveRules.REFILL_MILLIS }
+        loots.values.forEach { it.entries.removeIf { e -> now >= e.value + HoneyHiveRules.REFILL_MILLIS } }
+        queenRefills.values.forEach { it.entries.removeIf { e -> now >= e.value + HoneyHiveRules.REFILL_MILLIS } }
+        val lootedAt = scope?.let { loots[it] }.orEmpty()
+        val queen = scope?.let { queenRefills[it] }.orEmpty()
+        val refillTimes = refills.takeIf { refillsScope != null && refillsScope == scope }
         val shown = mutableListOf<Pair<Hive, Int>>()
         val counting = mutableListOf<Pair<Hive, Long>>()
         for (hive in hives.values) {
@@ -119,7 +154,7 @@ object HoneyHives {
             val block = if (world.hasChunkAt(pos)) world.getBlockState(pos).takeIf { it.hasProperty(BeehiveBlock.HONEY_LEVEL) } else null
             val looted = lootedAt[hive.key]
             when (HoneyHiveRules.state(now, looted, block?.let { it.getValue(BeehiveBlock.HONEY_LEVEL) >= BeehiveBlock.MAX_HONEY_LEVELS },
-                hive.id?.let(refills::get), hive.id != null)) {
+                hive.id?.let { refillTimes?.get(it) }, hive.id != null, refillTimes != null, queen[hive.key])) {
                 HiveState.FULL -> shown += hive to FULL
                 HiveState.UNKNOWN -> shown += hive to UNKNOWN
                 HiveState.EMPTY -> if (looted != null && ConfigManager.honeyHiveRefillLabels) counting += hive to looted + HoneyHiveRules.REFILL_MILLIS
@@ -157,13 +192,20 @@ object HoneyHives {
     private fun refresh(client: Minecraft, now: Long) {
         if (refreshing) return
         val uuid = client.player?.uuid?.toString() ?: return
+        val asked = scope ?: return
         refreshing = true; refilledAt = now
         executor.submit {
             val result = runCatching { HypixelApi.getHoneyRefills(uuid) }
             client.execute {
                 refreshing = false
-                result.onFailure { logger.info("Honeyhive refill lookup failed: {}", it.message) }.onSuccess { found ->
-                    refills = found
+                // A late answer for another player or profile is not this one's.
+                if (asked != scope) { refilledAt = 0; return@execute }
+                result.onFailure { logger.info("Honeyhive refill lookup failed: {}", it.message) }.onSuccess { response ->
+                    // The selected profile changed since the Profile ID line: don't trust it for this scope.
+                    if (response.profile != null && response.profile.replace("-", "") != profile?.replace("-", "")) return@onSuccess
+                    refills = response.refills; refillsScope = asked
+                    val found = response.refills ?: return@onSuccess
+                    if (pendingScope != asked) return@onSuccess
                     val bound = HoneyHiveRules.bind(pending, found, hives.values.mapNotNull { it.id }.toSet())
                     bound.forEach { (key, id) -> hives[key]?.id = id; pending.remove(key) }
                     pending.entries.removeIf { System.currentTimeMillis() - it.value > HoneyHiveRules.REFILL_MILLIS }
@@ -244,8 +286,9 @@ object HoneyHives {
             when {
                 name.startsWith("hive.") -> HoneyHiveRules.parse(name.removePrefix("hive.").replace(',', ' ') + " " + value)
                     .firstOrNull()?.let { hive -> hives.merge(hive.key, hive) { old, new -> old.apply { id = id ?: new.id } } }
-                name.startsWith("loot.") -> value.toLongOrNull()?.takeIf { now < it + HoneyHiveRules.REFILL_MILLIS }
-                    ?.let { lootedAt[name.removePrefix("loot.")] = it }
+                name.startsWith("loot.") -> HoneyHiveRules.parseLoot(name, value)
+                    ?.takeIf { (_, _, at) -> now < at + HoneyHiveRules.REFILL_MILLIS }
+                    ?.let { (owner, key, at) -> loots.getOrPut(owner) { mutableMapOf() }[key] = at }
             }
         }
     }
@@ -253,7 +296,7 @@ object HoneyHives {
     private fun save() {
         val out = Properties()
         hives.values.forEach { out.setProperty("hive.${it.key}", it.id ?: "-") }
-        lootedAt.forEach { (key, at) -> out.setProperty("loot.$key", at.toString()) }
+        loots.forEach { (owner, hiveLoots) -> hiveLoots.forEach { (key, at) -> out.setProperty("loot.$owner.$key", at.toString()) } }
         runCatching { Files.createDirectories(file.parent); Files.newOutputStream(file).use { out.store(it, "Sparkling Mutuals honeyhives") } }
             .onFailure { logger.warn("Couldn't save honeyhives", it) }
     }

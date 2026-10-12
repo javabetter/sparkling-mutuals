@@ -49,10 +49,9 @@ object HypixelApi {
     }
 
     /** Hive id -> when it refills, for hives looted in the last hour on any session. */
-    fun getHoneyRefills(playerUuid: String): Map<String, Long> = data {
-        val times = getMember(playerUuid, getCurrentProfileUuid(playerUuid)).getAsJsonObject("foraging")
-            ?.getAsJsonObject("honey")?.getAsJsonObject("refill_times") ?: return@data emptyMap()
-        times.entrySet().filter { it.value.isJsonPrimitive && it.value.asJsonPrimitive.isNumber }.associate { it.key to it.value.asLong }
+    fun getHoneyRefills(playerUuid: String): HoneyRefills = data {
+        val profile = getCurrentProfileUuid(playerUuid)
+        HoneyRefills(profile, HoneyRefills.read(getMember(playerUuid, profile)))
     }
 
     private fun getMember(playerUuid: String, profileUuid: String): JsonObject = data {
