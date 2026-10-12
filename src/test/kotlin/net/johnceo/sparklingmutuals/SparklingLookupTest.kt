@@ -19,6 +19,26 @@ class SparklingLookupTest {
         assertEquals(30L, profile.totalCaptured)
         assertEquals(2.0, profile.huntingLevel!!, 1e-9)
     }
+    @Test fun `the shared API's response fills the whole card`() {
+        // Produced by Shiny Hunter's Worker trimming code; the cloud serves only the selected profile's member.
+        val body = JsonParser.parseString(javaClass.getResource("/cloud/profile.json")!!.readText()).asJsonObject
+        val member = body.getAsJsonArray("profiles")[0].asJsonObject.getAsJsonObject("members")
+            .getAsJsonObject("0123456789abcdef0123456789abcdef")
+        val profile = SafariProfile.from(member)
+        assertEquals(setOf("SOLSNATCHER", "GAZER"), profile.discoveries)
+        assertEquals(39L, profile.tickets["basic"])
+        assertEquals(12212L, profile.essence)
+        assertEquals(3150000.5, profile.huntingXp)
+        assertNotNull(profile.huntingLevel)
+    }
+    @Test fun `stats Hypixel leaves out show as unknown instead of zero`() {
+        val member = JsonParser.parseString("""{"safari":{"discovered_sparkling_critters":[]},
+            "player_data":{"experience":{}},"currencies":{"essence":{}}}""").asJsonObject
+        val profile = SafariProfile.from(member)
+        assertNull(profile.huntingXp)
+        assertNull(profile.huntingLevel)
+        assertNull(profile.essence)
+    }
     @Test fun `hunting levels follow the skill table and overflow past sixty`() {
         assertEquals(0.5, SafariProfile.levelFromXp(25.0), 1e-9)
         assertEquals(60.0, SafariProfile.levelFromXp(111_672_425.0), 1e-9)
