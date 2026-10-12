@@ -47,6 +47,40 @@ class HistoryTest {
         assertTrue(run.imported)
         assertEquals(1, parser.sparklings.size); assertEquals(1, parser.sparklings[0].tickets)
     }
+    @Test fun `reimporting short runs close together matches each saved run once`() {
+        val first = RunRecord(start = 1_000_000, imported = true)
+        val second = RunRecord(start = 1_100_000, imported = true)
+        val runs = mutableListOf(second, first)
+        val added = HistoryMerge.merge(runs, listOf(RunRecord(start = 1_000_000, caught = 3, imported = true),
+            RunRecord(start = 1_100_000, caught = 4, imported = true)))
+        assertEquals(0, added)
+        assertEquals(listOf(4, 3), runs.map { it.caught })
+        assertEquals(listOf(2, 1), runs.map { it.number })
+    }
+    @Test fun `a run still open at the end of latest log is left for live recording`() {
+        val log = listOf(
+            "[13:00:00] [Render thread/INFO]: [CHAT] [NPC] Safari Manager: Looks good to me. Have fun out there!",
+            "[13:00:30] [Render thread/INFO]: [CHAT] CAPTURE! You caught a Cavernfish and gained a Cavernfish Shard!").joinToString("\n")
+        val live = LogImporter.Parser("Me").apply { read(log.reader().buffered(), LocalDate.of(2026, 10, 10), closeAtEnd = false) }
+        assertTrue(live.runs.isEmpty())
+        val archived = LogImporter.Parser("Me").apply { read(log.reader().buffered(), LocalDate.of(2026, 10, 10)) }
+        assertEquals(1, archived.runs.size)
+    }
+    @Test fun `latest log's start day accounts for midnight`() {
+        fun t(h: Int, m: Int) = java.time.LocalTime.of(h, m)
+        val modified = java.time.LocalDateTime.of(2026, 10, 11, 1, 0)
+        assertEquals(LocalDate.of(2026, 10, 10), LogImporter.startDay(listOf(t(23, 0), t(23, 59), t(0, 30)), modified))
+        assertEquals(LocalDate.of(2026, 10, 11), LogImporter.startDay(listOf(t(0, 10), t(0, 50)), modified))
+        // Last line just before midnight, file flushed just after.
+        assertEquals(LocalDate.of(2026, 10, 10), LogImporter.startDay(listOf(t(22, 0), t(23, 59)), java.time.LocalDateTime.of(2026, 10, 11, 0, 0, 5)))
+    }
+    @Test fun `a contest completion keeps its own window across boundaries and days`() {
+        val a = net.johnceo.sparklingmutuals.contest.ContestTracker.absoluteWindow(java.time.LocalDateTime.of(2026, 10, 10, 12, 34, 50))
+        val b = net.johnceo.sparklingmutuals.contest.ContestTracker.absoluteWindow(java.time.LocalDateTime.of(2026, 10, 10, 12, 35, 5))
+        val tomorrow = net.johnceo.sparklingmutuals.contest.ContestTracker.absoluteWindow(java.time.LocalDateTime.of(2026, 10, 11, 12, 34, 50))
+        assertEquals(1, b - a)
+        assertEquals(72, tomorrow - a)
+    }
     @Test fun `imports skip runs already saved, refresh earlier imports and renumber oldest first`() {
         val live = RunRecord(start = 1_000_000, caught = 5)
         val oldImport = RunRecord(start = 5_000_000, caught = 1, imported = true)

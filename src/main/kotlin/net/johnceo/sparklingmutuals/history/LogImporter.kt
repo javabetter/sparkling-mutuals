@@ -58,7 +58,8 @@ object LogImporter {
         private var splits = linkedMapOf<String, Long>()
         private var lastSecured = 0L
 
-        fun read(reader: BufferedReader, startDay: LocalDate) {
+        /** [closeAtEnd] false for the live latest.log: a run still open there is in progress and is left for live recording. */
+        fun read(reader: BufferedReader, startDay: LocalDate, closeAtEnd: Boolean = true) {
             var day = startDay
             var last = 0L
             reader.lineSequence().forEach { raw ->
@@ -70,7 +71,7 @@ object LogImporter {
                 last = at
                 handle(SafariRules.strip(m.groupValues[4]), at)
             }
-            close(last)
+            if (closeAtEnd) close(last) else run = null
         }
 
         fun handle(text: String, at: Long) {
@@ -119,6 +120,31 @@ object LogImporter {
         }
     }
 
+    private val anyLine = Regex("""^\[(\d{2}):(\d{2}):(\d{2})]""")
+    /**
+     * The day latest.log started on. Its modification time is when it was last written, so step back one day for
+     * each midnight its timestamps cross, and one more if the last line is later in the day than the file's time
+     * (written just before midnight, flushed just after).
+     */
+    fun startDay(times: List<java.time.LocalTime>, modified: LocalDateTime): LocalDate {
+        var crossings = 0L
+        var previous: java.time.LocalTime? = null
+        for (time in times) {
+            if (previous != null && time.toSecondOfDay() < previous.toSecondOfDay() - 3600) crossings++
+            previous = time
+        }
+        var endDay = modified.toLocalDate()
+        if (previous != null && previous.toSecondOfDay() > modified.toLocalTime().toSecondOfDay() + 3600) endDay = endDay.minusDays(1)
+        return endDay.minusDays(crossings)
+    }
+    private fun latestStartDay(latest: Path): LocalDate {
+        val modified = LocalDateTime.ofInstant(Files.getLastModifiedTime(latest).toInstant(), ZoneId.systemDefault())
+        val times = runCatching { Files.newBufferedReader(latest).useLines { lines -> lines.mapNotNull { anyLine.find(it) }
+            .map { java.time.LocalTime.of(it.groupValues[1].toInt(), it.groupValues[2].toInt(), it.groupValues[3].toInt()) }.toList() } }
+            .getOrDefault(emptyList())
+        return startDay(times, modified)
+    }
+
     private fun files(folder: Path, newerThan: Long): List<LogFile> {
         val found = runCatching { Files.list(folder).use { listing -> listing.toList() } }.getOrDefault(emptyList()).mapNotNull { path ->
             val m = fileName.matchEntire(path.fileName.toString()) ?: return@mapNotNull null
@@ -140,15 +166,14 @@ object LogImporter {
                 val logs = files(folder, newerThan).toMutableList()
                 val newest = logs.maxOfOrNull { it.modified } ?: 0L
                 val latest = folder.resolve("latest.log")
-                if (includeLatest && Files.exists(latest)) logs += LogFile(latest,
-                    LocalDateTime.ofInstant(Files.getLastModifiedTime(latest).toInstant(), ZoneId.systemDefault()).toLocalDate(), Int.MAX_VALUE, 0)
+                if (includeLatest && Files.exists(latest)) logs += LogFile(latest, latestStartDay(latest), Int.MAX_VALUE, 0)
                 bytesTotal = maxOf(1L, logs.sumOf { runCatching { Files.size(it.path) }.getOrDefault(0L) })
                 bytesDone = 0; filesTotal = logs.size; filesDone = 0
                 val parser = Parser(self)
                 for (log in logs) {
                     runCatching {
                         val input = Files.newInputStream(log.path).let { if (log.path.toString().endsWith(".gz")) GZIPInputStream(it) else it }
-                        input.bufferedReader().use { parser.read(it, log.day) }
+                        input.bufferedReader().use { parser.read(it, log.day, closeAtEnd = log.path != latest) }
                     }
                     bytesDone += runCatching { Files.size(log.path) }.getOrDefault(0L); filesDone++
                 }

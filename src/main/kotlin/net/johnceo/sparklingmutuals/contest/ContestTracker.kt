@@ -39,6 +39,7 @@ object ContestTracker {
     private var windowKey = -1L
     private var secondsIntoWindow = 0
     private var complete = false
+    private var completedWindow = -1L
     private var points = -1
     private var tier = ""
 
@@ -108,6 +109,7 @@ object ContestTracker {
             tier.uppercase() in completeTiers
         ) {
             complete = true
+            completedWindow = absoluteWindow(java.time.LocalDateTime.now())
             println("Sparkling Mutuals: Contest complete — $tier with $points")
         }
     }
@@ -176,6 +178,11 @@ object ContestTracker {
     }
 
     fun isComplete(): Boolean = complete
+
+    /** The contest a completion belongs to, read together with it: unique across days, null while incomplete. */
+    fun completedWindow(): Long? = if (complete) completedWindow else null
+    fun absoluteWindow(time: java.time.LocalDateTime): Long =
+        Math.floorDiv(time.toEpochSecond(java.time.ZoneOffset.UTC) - FIRST_START_MINUTE * 60, WINDOW_SECONDS.toLong())
 
     fun currentTier(): String = tier
 

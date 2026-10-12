@@ -69,7 +69,10 @@ object RunHistory {
             tickets = tickets, shards = LinkedHashMap(tally.shards), catches = LinkedHashMap(tally.catches),
             feathers = tally.feathers, sparklings = tally.sparklings.toMutableList(), ownSparklings = tally.ownSparklings,
             macaws = tally.macaws, splits = LinkedHashMap(splits))
-        record.number = data.nextNumber++
+        // A manual import during this run may have read it from latest.log already; the live record replaces that.
+        val imported = data.runs.filter { it.imported && kotlin.math.abs(it.start - record.start) <= HistoryMerge.SAME_RUN_MILLIS }
+        data.runs.removeAll(imported)
+        record.number = imported.minOfOrNull { it.number } ?: data.nextNumber++
         data.runs.add(0, record)
         save()
         Achievements.onRunEnd(record)
@@ -91,15 +94,25 @@ object RunHistory {
 
 /** The merge behind imports, separate so it can be tested. */
 object HistoryMerge {
-    private const val SAME_RUN_MILLIS = 120_000L
-    /** Merges [found] into [runs] (newest first afterwards), renumbering oldest first; returns how many were new. */
+    const val SAME_RUN_MILLIS = 120_000L
+    /**
+     * Merges [found] into [runs] (newest first afterwards), renumbering oldest first; returns how many were new.
+     * Each saved run matches at most one found run, the closest in time; runs found in this batch never match
+     * each other, so two short runs close together both survive.
+     */
     fun merge(runs: MutableList<RunRecord>, found: List<RunRecord>): Int {
-        val before = runs.toList()
+        val unmatched = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<RunRecord, Boolean>()).apply { addAll(runs) }
         var added = 0
         for (run in found) {
-            val existing = before.firstOrNull { kotlin.math.abs(it.start - run.start) <= SAME_RUN_MILLIS }
-            if (existing == null) { runs += run; added++ }
-            else if (existing.imported) runs[runs.indexOf(existing)] = run
+            val existing = unmatched.filter { kotlin.math.abs(it.start - run.start) <= SAME_RUN_MILLIS }
+                .minByOrNull { kotlin.math.abs(it.start - run.start) }
+            if (existing == null) { runs += run; added++; continue }
+            unmatched.remove(existing)
+            if (existing.imported) {
+                val index = runs.indexOfFirst { it === existing }
+                run.number = existing.number
+                runs[index] = run
+            }
         }
         runs.sortBy { it.start }
         runs.forEachIndexed { index, run -> run.number = index + 1 }

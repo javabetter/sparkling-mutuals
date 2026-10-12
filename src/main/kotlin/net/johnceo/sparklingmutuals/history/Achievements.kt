@@ -128,9 +128,9 @@ object Achievements {
     fun tick(client: Minecraft) {
         if (client.player == null || !ConfigManager.achievements) return
         if (!data.initialised) { initialise(client); return }
-        // A contest is counted once per window, however many times the sidebar shows it done.
-        if (ContestTracker.isComplete()) {
-            val window = Math.floorDiv(LocalDateTime.now().toEpochSecond(ZoneOffset.UTC) - 15 * 60, 1200L)
+        // A contest is counted once per window, however many times the sidebar shows it done. The window comes from
+        // the tracker with its completion, so a completion from just before a boundary can't count for the next one.
+        ContestTracker.completedWindow()?.let { window ->
             if (window != data.lastContestWindow) { data.lastContestWindow = window; data.contestsCompleted++; save(); checkAll(true) }
         }
         if (++ticks % 200 == 0) checkAll(true)
@@ -237,8 +237,9 @@ object Achievements {
     fun unlockedAt(achievement: Achievement) = (if (achievement.id.startsWith("emblem:"))
         data.emblems[achievement.id.removePrefix("emblem:")] else data.unlocked[achievement.id]) ?: 0L
 
+    /** With achievements off, progress still counts but nothing unlocks or is announced; it catches up when turned on. */
     private fun unlock(id: String, announce: Boolean) {
-        if (id in data.unlocked) return
+        if (!ConfigManager.achievements || id in data.unlocked) return
         val achievement = definitions.firstOrNull { it.id == id } ?: return
         data.unlocked[id] = System.currentTimeMillis()
         save()
@@ -247,6 +248,7 @@ object Achievements {
 
     /** "ACHIEVEMENT UNLOCKED! Macaw Mania" in the tier's colour, the description on hover. */
     private fun announce(achievement: Achievement) {
+        if (!ConfigManager.achievements) return
         val client = Minecraft.getInstance()
         val player = client.player ?: return
         val tier = achievement.tier
