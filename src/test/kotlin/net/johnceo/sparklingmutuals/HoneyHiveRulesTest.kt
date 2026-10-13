@@ -53,28 +53,28 @@ class HoneyHiveRulesTest {
         } finally { fields.forEach { (name, field) -> field.set(ContestTracker, previous.getValue(name)) } }
     }
 
-    @Test fun `your own loot beats a block that still looks full`() {
-        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(1000, lootedAt = 0, blockFull = true, refillAt = null, matched = true))
-        assertEquals(HiveState.FULL, HoneyHiveRules.state(hour, lootedAt = 0, blockFull = true, refillAt = null, matched = true))
+    @Test fun `a hive is empty until its own refill time and full after, never looted means full`() {
+        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(1000, refillAt = hour))
+        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(hour - 1, refillAt = hour))
+        assertEquals(HiveState.FULL, HoneyHiveRules.state(hour, refillAt = hour))
+        assertEquals(HiveState.FULL, HoneyHiveRules.state(0, refillAt = null))
     }
-    @Test fun `then the API's pending refill, then the block, then whether the hive is matched`() {
-        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(0, null, blockFull = false, refillAt = null, matched = false))
-        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(0, null, null, refillAt = 10, matched = true))
-        assertEquals(HiveState.FULL, HoneyHiveRules.state(20, null, null, refillAt = 10, matched = true))
-        assertEquals(HiveState.FULL, HoneyHiveRules.state(20, null, blockFull = true, refillAt = 10, matched = true))
-        assertEquals(HiveState.FULL, HoneyHiveRules.state(0, null, null, null, matched = true))
-        assertEquals(HiveState.UNKNOWN, HoneyHiveRules.state(0, null, null, null, matched = false))
+    @Test fun `API refill times fold in per hive, the later time winning`() {
+        // Looted in another session: the API's time is the hive's.
+        assertEquals(hour, HoneyHiveRules.merge(null, hour, null, now = 0))
+        // The API lagging a loot just seen here never shortens it.
+        assertEquals(hour + 60_000, HoneyHiveRules.merge(hour + 60_000, hour, null, now = 0))
+        assertEquals(hour + 60_000, HoneyHiveRules.merge(hour, hour + 60_000, null, now = 0))
+        // A time already passed changes nothing.
+        assertNull(HoneyHiveRules.merge(null, 10, null, now = 20))
     }
-    @Test fun `a loot from another session beats a block that looks full`() {
-        // Looted elsewhere, no local record: the API's refill an hour out wins over the full-looking block.
-        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(1000, null, blockFull = true, refillAt = hour, matched = true))
-        // A Queen Bee refill seen after that loot makes it full again, despite the stale API time.
-        assertEquals(HiveState.FULL, HoneyHiveRules.state(1000, null, blockFull = true, refillAt = hour, matched = true, queenRefilledAt = 500))
-        // A loot after the Queen Bee refill counts again.
-        assertEquals(HiveState.EMPTY, HoneyHiveRules.state(2000, null, blockFull = true, refillAt = hour + 1500, matched = true, queenRefilledAt = 500))
+    @Test fun `a Queen Bee proc voids the refill time of the loot before it`() {
+        // Loot at 0 (API says refill at 1h + 1s), Queen Bee a moment later.
+        assertNull(HoneyHiveRules.merge(null, hour + 1_000, queenAt = 300, now = 1_000))
+        // A loot after the proc counts again.
+        assertEquals(hour + 120_000, HoneyHiveRules.merge(null, hour + 120_000, queenAt = 300, now = 120_000))
     }
-    @Test fun `no honey data from the API leaves unloaded matched hives unknown, not full`() {
-        assertEquals(HiveState.UNKNOWN, HoneyHiveRules.state(0, null, null, null, matched = true, refillsKnown = false))
+    @Test fun `no honey data from the API is told apart from an empty refill list`() {
         val cloud = JsonParser.parseString(javaClass.getResource("/cloud/profile.json")!!.readText()).asJsonObject
         val member = { body: com.google.gson.JsonObject -> body.getAsJsonArray("profiles")[0].asJsonObject.getAsJsonObject("members")
             .entrySet().first().value.asJsonObject }
@@ -92,6 +92,7 @@ class HoneyHiveRulesTest {
         assertNull(HoneyHiveRules.profileId("Party > Farmer: Profile ID: 0c5b0ffe-b3b7-4ea5-a1d5-c1d3c14d9688"))
         assertEquals(Triple(a, "-729,129,187", 5L), HoneyHiveRules.parseLoot("loot.$a.-729,129,187", "5"))
         assertNull(HoneyHiveRules.parseLoot("loot.-729,129,187", "5"), "an entry without an owner is dropped")
+        assertEquals(Triple(a, "-730,132,184", 9L), HoneyHiveRules.parseLoot("refill.$a.-730,132,184", "9", "refill"))
     }
     @Test fun `a completed contest does not hide beacons in later contests`() {
         val window = ContestTracker.windowAt(LocalTime.of(12, 20))
@@ -113,7 +114,8 @@ class HoneyHiveRulesTest {
     @Test fun `the bundled survey parses with ids and unmatched hives`() {
         val text = javaClass.getResourceAsStream("/assets/sparkling-mutuals/honeyhives.txt")!!.bufferedReader().readText()
         val hives = HoneyHiveRules.parse(text)
-        assertEquals(19, hives.size)
+        assertEquals(20, hives.size)
+        assertTrue(hives.any { it.key == "-730,132,184" }, "the hive above the Safari entrance")
         assertTrue(hives.any { it.id == null })
         assertEquals("hive_5", hives.first { it.key == "-729,129,187" }.id)
         assertEquals("Refills in 42m", HoneyHiveRules.countdown(42 * 60_000L + 500))
