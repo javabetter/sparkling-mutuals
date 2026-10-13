@@ -1,6 +1,7 @@
 # Torrhus Canyon honeyhives: x y z and Hypixel's hive id (- while unmatched). Surveyed by Shiny Hunter.
 -733 128 188 -
 -729 129 187 hive_5
+-730 132 184 -
 -724 92 204 hive_10
 -724 93 211 hive_3
 -721 92 207 hive_4
