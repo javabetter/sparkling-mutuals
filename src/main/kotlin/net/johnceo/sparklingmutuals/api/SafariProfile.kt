@@ -6,7 +6,7 @@ import net.johnceo.sparklingmutuals.safari.SafariRoster
 
 /** One player's Safari stats from their selected SkyBlock profile, for `/sparkling`. */
 data class SafariProfile(val discoveries: Set<String>, val tickets: Map<String, Long>, val huntingXp: Double?,
-    val essence: Long?, val totalCaptured: Long?) {
+    val essence: Long?, val totalCaptured: Long?, val runs: Long? = null, val catches: Long? = null) {
     /** Roster names of the discovered sparklings, in roster order. */
     val caught get() = SafariRoster.all.filter { key(it.name) in discoveries }.map { it.name }
     val missing get() = SafariRoster.all.filter { key(it.name) !in discoveries }.map { it.name }
@@ -15,6 +15,10 @@ data class SafariProfile(val discoveries: Set<String>, val tickets: Map<String, 
     companion object {
         val TICKET_TIERS = listOf("basic", "economy", "premium", "first_class")
         fun key(name: String) = name.uppercase(java.util.Locale.ROOT).replace(' ', '_')
+        /** A critter's bestiary id (`mantis_shrimp_1`). */
+        fun bestiaryId(name: String) = key(name).lowercase(java.util.Locale.ROOT) + "_1"
+        /** One of each per run, so the highest of their bestiary kills is the number of runs. */
+        private val ONCE_A_RUN = listOf("Doomspiral", "Wumpa", "Hideyho")
 
         fun from(member: JsonObject): SafariProfile {
             fun at(path: String): JsonElement? = path.split('.').fold(member as JsonElement?) { node, step ->
@@ -24,8 +28,12 @@ data class SafariProfile(val discoveries: Set<String>, val tickets: Map<String, 
             val discoveries = safari.getAsJsonArray("discovered_sparkling_critters")?.map { it.asString }?.toSet()
                 ?: throw ApiFailure.dataUnavailable()
             val tickets = TICKET_TIERS.associateWith { number("safari.tickets.$it")?.asLong ?: 0L }
+            // Bestiary kills of the Safari critters are your own catches.
+            val kills = at("bestiary.kills")?.takeIf { it.isJsonObject }?.asJsonObject
+            fun kills(name: String) = kills?.get(bestiaryId(name))?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asLong ?: 0L
             return SafariProfile(discoveries, tickets, number("player_data.experience.SKILL_HUNTING")?.asDouble,
-                number("currencies.essence.SAFARI.current")?.asLong, number("safari.total_captured_sparkling_critters")?.asLong)
+                number("currencies.essence.SAFARI.current")?.asLong, number("safari.total_captured_sparkling_critters")?.asLong,
+                kills?.let { ONCE_A_RUN.maxOf(::kills) }, kills?.let { SafariRoster.all.sumOf { kills(it.name) } })
         }
 
         /** SkyBlock's shared skill table, levels 1-60. */

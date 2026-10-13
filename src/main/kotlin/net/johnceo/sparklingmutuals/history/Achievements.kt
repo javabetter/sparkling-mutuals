@@ -20,11 +20,11 @@ import java.time.ZoneOffset
 enum class AchievementTier(val code: String, val argb: Int) {
     COMMON("§f", 0xFFFFFFFF.toInt()), UNCOMMON("§a", 0xFF55FF55.toInt()), RARE("§9", 0xFF5555FF.toInt()),
     EPIC("§5", 0xFFAA00AA.toInt()), LEGENDARY("§6", 0xFFFFAA00.toInt()), MYTHIC("§d", 0xFFFF55FF.toInt()),
-    DIVINE("§b", 0xFF55FFFF.toInt())
+    DIVINE("§b", 0xFF55FFFF.toInt()), SPECIAL("§c", 0xFFFF5555.toInt())
 }
 
 /** What an achievement is measured against; anything but EVENT gets a progress bar. */
-enum class Measure { EVENT, RUNS, HOURS, CAUGHT, COINS, OWN_SPARKLINGS, UNIQUES, DRY_SPARKLING, DRY_UNIQUE, RUNS_SINCE_MACAW, CONTESTS, EMBLEMS }
+enum class Measure { EVENT, RUNS, HOURS, CAUGHT, COINS, OWN_SPARKLINGS, UNIQUES, DRY_SPARKLING, DRY_UNIQUE, RUNS_SINCE_MACAW, CONTESTS }
 
 data class Achievement(val id: String, val name: String, val description: String, val tier: AchievementTier,
     val measure: Measure = Measure.EVENT, val goal: Long = 1, val secret: Boolean = false) {
@@ -34,15 +34,16 @@ data class Achievement(val id: String, val name: String, val description: String
 /**
  * Achievements in the style of SkyBlock Overhaul's: each has a rarity, unlocks once with a chat line and a sound (the
  * challenge fanfare for Mythic and Divine), and some stay secret until earned. Most are worked out from the run and
- * sparkling history; the rest are chat events (an Emerald Dye, an emblem). The first time it runs it unlocks whatever
+ * sparkling history, topped up from your own Hypixel profile ([OwnStats]); the rest are chat events (an Emerald Dye). The first time it runs it unlocks whatever
  * the existing history already earns, quietly, in one line.
  */
 object Achievements {
     private val tiers = AchievementTier.entries
     val definitions: List<Achievement> = listOf(
         Achievement("first_sparkle", "First Sparkle", "Catch your first sparkling critter.", AchievementTier.COMMON),
-        Achievement("party_double", "Shared Shine", "Your party catches 2 sparklings in one run.", AchievementTier.RARE),
-        Achievement("party_triple", "Sparkle Storm", "Your party catches 3 sparklings in one run.", AchievementTier.LEGENDARY),
+        Achievement("party_double", "Shared Shine", "Your party catches 2 sparklings in one run.", AchievementTier.LEGENDARY),
+        Achievement("party_triple", "Sparkle Storm", "Your party catches 3 sparklings in one run.", AchievementTier.DIVINE),
+        Achievement("own_triple", "Hat Trick", "Catch 3 sparklings yourself in one run.", AchievementTier.SPECIAL),
         Achievement("sparkle_10", "Glimmer", "Catch 10 sparklings.", AchievementTier.UNCOMMON, Measure.OWN_SPARKLINGS, 10),
         Achievement("sparkle_25", "Gleam", "Catch 25 sparklings.", AchievementTier.RARE, Measure.OWN_SPARKLINGS, 25),
         Achievement("sparkle_50", "Radiance", "Catch 50 sparklings.", AchievementTier.EPIC, Measure.OWN_SPARKLINGS, 50),
@@ -66,16 +67,14 @@ object Achievements {
         Achievement("no_unique_runs_10", "Deja Vu", "10 runs in a row without a new unique sparkling.", AchievementTier.EPIC, Measure.DRY_UNIQUE, 10),
         Achievement("no_unique_runs_25", "Groundhog Day", "25 runs in a row without a new unique sparkling.", AchievementTier.LEGENDARY, Measure.DRY_UNIQUE, 25),
         Achievement("no_unique_runs_50", "Broken Record", "50 runs in a row without a new unique sparkling.", AchievementTier.MYTHIC, Measure.DRY_UNIQUE, 50),
+        Achievement("no_unique_runs_250", "Eternal Rerun", "250 runs in a row without a new unique sparkling.", AchievementTier.DIVINE, Measure.DRY_UNIQUE, 250),
         Achievement("macaw_3", "Bird Watcher", "Your party secures 3 Macaws in one run.", AchievementTier.RARE),
         Achievement("macaw_4", "Flock Together", "Your party secures 4 Macaws in one run.", AchievementTier.EPIC),
         Achievement("macaw_8", "Macaw Mania", "Your party secures 8 Macaws in one run.", AchievementTier.LEGENDARY),
         Achievement("no_macaw_3", "Where's the Macaw?", "3 runs in a row without a Macaw.", AchievementTier.UNCOMMON, Measure.RUNS_SINCE_MACAW, 3),
         Achievement("no_macaw_5", "Macaw Drought", "5 runs in a row without a Macaw.", AchievementTier.RARE, Measure.RUNS_SINCE_MACAW, 5),
         Achievement("no_macaw_8", "Extinct", "8 runs in a row without a Macaw.", AchievementTier.EPIC, Measure.RUNS_SINCE_MACAW, 8),
-        Achievement("no_macaw_10", "Myth of the Macaw", "10 runs in a row without a Macaw.", AchievementTier.MYTHIC, Measure.RUNS_SINCE_MACAW, 10),
         Achievement("emerald_dye", "Emerald Dye", "Find an Emerald Dye.", AchievementTier.DIVINE),
-        Achievement("emblem_1", "Emblematic", "Unlock an emblem.", AchievementTier.RARE, Measure.EMBLEMS, 1),
-        Achievement("emblem_5", "Emblem Collector", "Unlock 5 emblems.", AchievementTier.LEGENDARY, Measure.EMBLEMS, 5),
         Achievement("run_10", "Safari Rookie", "Finish 10 Safari runs.", AchievementTier.COMMON, Measure.RUNS, 10),
         Achievement("run_50", "Regular", "Finish 50 Safari runs.", AchievementTier.UNCOMMON, Measure.RUNS, 50),
         Achievement("run_100", "Ranger", "Finish 100 Safari runs.", AchievementTier.RARE, Measure.RUNS, 100),
@@ -101,8 +100,7 @@ object Achievements {
         Achievement("back_to_back", "Back to Back", "Catch a sparkling in two runs in a row.", AchievementTier.LEGENDARY, secret = true),
         Achievement("instant", "Instant Gratification", "Catch a sparkling within 5 tickets of your last one.", AchievementTier.EPIC, secret = true),
     )
-    fun all(): List<Achievement> = definitions + data.emblems.keys.map {
-        Achievement("emblem:$it", "$it Emblem", "Unlock the $it emblem.", AchievementTier.EPIC) }
+    fun all(): List<Achievement> = definitions
 
     class Data(var initialised: Boolean = false, var unlocked: MutableMap<String, Long> = linkedMapOf(),
         var emblems: MutableMap<String, Long> = linkedMapOf(), var runsSinceOwnSparkling: Int = 0,
@@ -114,12 +112,11 @@ object Achievements {
     private var ticks = 0
 
     private val emeraldDrop = Regex("^(?:[A-Z!' ]*DROP!|WOW!|RNG METER|NICE!)", RegexOption.IGNORE_CASE)
-    private val emblemLines = listOf(
-        Regex("(?i)\\bemblem unlocked!?\\s*[:\\-]?\\s*(?:the\\s+)?(.+?)(?:\\s+emblem)?[.!]?$"),
-        Regex("(?i)\\b(?:unlocked|earned|obtained|received)\\s+(?:the\\s+|an?\\s+)?(.+?)\\s+emblem\\b"))
 
     fun register() {
         data = HistoryStore.load("achievements", Data::class.java, ::Data)
+        // Achievements that were removed (emblems, the 10-run Macaw drought) no longer count.
+        data.unlocked.keys.retainAll(definitions.map { it.id }.toSet())
         ClientReceiveMessageEvents.GAME.register { message, overlay ->
             if (!overlay) Minecraft.getInstance().execute { SafariMessages.lines(message.string).forEach(::chat) }
         }
@@ -173,14 +170,6 @@ object Achievements {
     private fun chat(text: String) {
         if (!ConfigManager.achievements) return
         if ("Emerald Dye" in text && ownDrop(text)) unlock("emerald_dye", true)
-        if ("emblem" in text.lowercase()) emblemLines.firstNotNullOfOrNull { it.find(text) }?.let { match ->
-            val name = match.groupValues[1].trim()
-            if (name.isNotEmpty() && name.length <= 32 && name !in data.emblems) {
-                data.emblems[name] = System.currentTimeMillis(); save()
-                announce(Achievement("emblem:$name", "$name Emblem", "Unlock the $name emblem.", AchievementTier.EPIC))
-                checkAll(true)
-            }
-        }
     }
     /** Your drop, not a broadcast of someone else's ("WOW! Name found Emerald Dye"). */
     fun ownDrop(text: String, self: String = Minecraft.getInstance()?.player?.name?.string.orEmpty()): Boolean {
@@ -206,6 +195,7 @@ object Achievements {
     private fun checkRun(run: RunRecord, announce: Boolean) {
         if (run.sparklings.size >= 2) unlock("party_double", announce)
         if (run.sparklings.size >= 3) unlock("party_triple", announce)
+        if (run.ownSparklings >= 3) unlock("own_triple", announce)
         if (run.macaws >= 3) unlock("macaw_3", announce)
         if (run.macaws >= 4) unlock("macaw_4", announce)
         if (run.macaws >= 8) unlock("macaw_8", announce)
@@ -222,9 +212,10 @@ object Achievements {
 
     fun progress(achievement: Achievement): Long = when (achievement.measure) {
         Measure.EVENT -> if (isUnlocked(achievement)) 1 else 0
-        Measure.RUNS -> RunHistory.runs.size.toLong()
+        // Hypixel's bestiary also counts runs and catches from before the mod was installed.
+        Measure.RUNS -> maxOf(RunHistory.runs.size.toLong(), OwnStats.runs)
         Measure.HOURS -> PlaytimeReader.safariMillis() / 3_600_000L
-        Measure.CAUGHT -> RunHistory.runs.sumOf { (it.caught + it.lootShares).toLong() }
+        Measure.CAUGHT -> maxOf(RunHistory.runs.sumOf { (it.caught + it.lootShares).toLong() }, OwnStats.caught)
         Measure.COINS -> RunHistory.runs.sumOf { maxOf(0L, it.coins) }
         Measure.OWN_SPARKLINGS -> ownEntries().size.toLong()
         Measure.UNIQUES -> ownDex().size.toLong()
@@ -232,13 +223,10 @@ object Achievements {
         Measure.DRY_UNIQUE -> maxOf(data.longestRunsWithoutUnique, data.runsSinceOwnUnique).toLong()
         Measure.RUNS_SINCE_MACAW -> maxOf(data.longestRunsWithoutMacaw, data.runsSinceMacaw).toLong()
         Measure.CONTESTS -> data.contestsCompleted.toLong()
-        Measure.EMBLEMS -> data.emblems.size.toLong()
     }
 
-    fun isUnlocked(achievement: Achievement) = if (achievement.id.startsWith("emblem:"))
-        achievement.id.removePrefix("emblem:") in data.emblems else achievement.id in data.unlocked
-    fun unlockedAt(achievement: Achievement) = (if (achievement.id.startsWith("emblem:"))
-        data.emblems[achievement.id.removePrefix("emblem:")] else data.unlocked[achievement.id]) ?: 0L
+    fun isUnlocked(achievement: Achievement) = achievement.id in data.unlocked
+    fun unlockedAt(achievement: Achievement) = data.unlocked[achievement.id] ?: 0L
 
     /** With achievements off, progress still counts but nothing unlocks or is announced; it catches up when turned on. */
     private fun unlock(id: String, announce: Boolean) {
@@ -315,8 +303,17 @@ object Achievements {
         val self = Minecraft.getInstance()?.player?.name?.string ?: return emptyList()
         return SparklingLog.entries.filter { it.player.equals(self, true) }
     }
-    /** Your sparkling dex, as far as your history shows it. */
-    fun ownDex(): Set<String> = ownEntries().mapNotNull { SafariRoster.named(it.critter)?.name }.toSet()
+    /** Your sparkling dex: your history, plus your Sparkling Critterdex from the API. */
+    fun ownDex(): Set<String> = ownEntries().mapNotNull { SafariRoster.named(it.critter)?.name }.toSet() + OwnStats.dex
+
+    /** Your profile was read from the API: whatever its runs, catches and dex earn is unlocked quietly. Returns how many. */
+    fun afterApiStats(): Int {
+        if (!data.initialised || !ConfigManager.achievements) return 0
+        val before = data.unlocked.size
+        checkAll(false)
+        save()
+        return data.unlocked.size - before
+    }
     val longestDrySparkling get() = maxOf(data.longestRunsWithoutSparkling, data.runsSinceOwnSparkling)
     val longestMacawDrought get() = maxOf(data.longestRunsWithoutMacaw, data.runsSinceMacaw)
     val runsSinceMacaw get() = data.runsSinceMacaw
